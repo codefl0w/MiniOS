@@ -54,15 +54,13 @@ Minigram is a bot bridge that connects you to Telegram. Use Telegram's official 
  
 ```text
 
-BOT_TOKEN=
-
-ME_ID= #Your user ID. Find it by running the @userinfobot on Telegram
-
-MINIGRAM_ENABLE_ADMIN_ROUTES=1 # Must be enabled for proper webhook setup.
-                               # can be set to 0 after successful setup.
+BOT_TOKEN=                         # Your bot's token. Do NOT share this publicly!
+ME_ID=                             # Your user ID. Find it by running the @userinfobot on Telegram
+MINIGRAM_ENABLE_ADMIN_ROUTES=1     # Must be enabled for proper webhook setup. Can be set to 0 after successful setup.
+                                       
 
 ```
-To set up properly, navigate to {URL}/set_webhook to connect to your bot. You can check the connection any time at /webhook_info.
+To set up the bot bridge, navigate to {URL}/set_webhook to connect to your bot. You can check the connection any time at /webhook_info.
   
 Using a bot has caveats. For example, the receiver must start a chat with your bot first, so your bot doesn't get treated as a blocked user. This is a one-time setup for each receiver.
 
@@ -78,9 +76,8 @@ The number at the end is the user ID. It doesn't have to be 7 digits.
 
 ```text
 
-GEMINI_API_KEY= # You can generate a free key at Google AI Studio.
-
-GEMINI_MODEL=gemini-3.5-flash # Default free model. Change if you have Pro.
+GEMINI_API_KEY=                   # You can generate a free key at Google AI Studio.
+GEMINI_MODEL=gemini-3.5-flash     # Default free model. Change if you have Pro.
 
 ```
 
@@ -92,11 +89,9 @@ GEMINI_MODEL=gemini-3.5-flash # Default free model. Change if you have Pro.
 
 ```text
 
-MAIL_USERNAME= # Your mail address
-
-MAIL_PASSWORD= # 16-digit Gmail App Login code. Generate one: https://support.google.com/mail/answer/185833
-
-MAIL_FROM= # Optional for sending. Use your mail address if you'll fill it.
+MAIL_USERNAME=      # Your mail address
+MAIL_PASSWORD=      # 16-digit Gmail App Login code. Generate one: https://support.google.com/mail/answer/185833
+MAIL_FROM=          # Optional for sending. Use your mail address if you'll fill it.
 
 ```
 
