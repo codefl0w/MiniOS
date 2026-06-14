@@ -28,7 +28,6 @@
   * [PythonAnywhere](#pythonanywhere)
   * [Render](#render)
   * [Railway](#railway)
-  * [Vercel](#vercel)
   * [Other hosts](#other-hosts)
 * [.env](#env)
 
@@ -163,15 +162,6 @@ Start command: python main.py
 Use Railway variables for secrets instead of committing `.env`, same as Render above.
 
 
-### Vercel
-
-Vercel is not recommended for the default MiniOS setup.
-
-MiniOS is a Flask app. Vercel mainly uses serverless functions, so the project would need adaptation before it can run there properly.
-
-Use Vercel only if you specifically want to convert MiniOS into a serverless-compatible app.
-
-
 ### Other hosts
 
 Other possible options:
@@ -289,10 +279,10 @@ Minimal Telegram web client.
 |Action|  Support| Description |
 |--|--| -- |
 | Send messages | ✅ |
-| Receive messages | ✅ |
+| Receive messages | ✅ | 
 | Send Emojis|✅  | Minigram has an ASCII-to-Emoji conversion feature. When you send "<3", the receiver sees a "❤️" instead.
-| Receive Emojis| ✅ | The same feature works the other way too. See all supported emojis below.
-| Send pictures| ❌| 
+| Receive Emojis| ✅ | The same feature works the other way too. See all supported emojis below. # TODO
+| Send pictures| ❌| MocorOS likely doesn't support uploads. To be tested and maybe changed later on.
 | Receive pictures| ✅ | Minigram can download the pictures, downscale them and display them in the chat UI directly.
 | Send stickers| ❌ | 
 | Receive stickers| ❌ | Could change in future updates.
