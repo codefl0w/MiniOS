@@ -283,13 +283,8 @@ Minigram supports these features:
 |--|--| -- |
 | Send messages | ✅ |
 | Receive messages | ✅ | 
-<<<<<<< HEAD
 | Send Emojis|✅  | Minigram has an ASCII-to-Emoji conversion feature. When you send "<3", the receiver sees a "💛" instead.
 | Receive Emojis| ✅ | The same feature works the other way too. See all supported emojis below. 
-=======
-| Send Emojis|✅  | Minigram has an ASCII-to-Emoji conversion feature. When you send "<3", the receiver sees a "❤️" instead.
-| Receive Emojis| ✅ | The same feature works the other way too. See all supported emojis below. # TODO
->>>>>>> 66fc55fc36c2736697eba39d6a7a5dd5b7aa7cab
 | Send pictures| ❌| MocorOS likely doesn't support uploads. To be tested and maybe changed later on.
 | Receive pictures| ✅ | Minigram can download the pictures, downscale them and display them in the chat UI directly.
 | Send stickers| ❌ | 
