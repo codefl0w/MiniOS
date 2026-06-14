@@ -32,11 +32,11 @@ _message_cache = {}
 
 
 def mail_limit():
-    return int(app_settings("mail").get("limit", 40))
+    return int(app_settings("mail")["limit"])
 
 
 def mail_cache_ttl():
-    return int(app_settings("mail").get("cache_ttl", 600))
+    return int(app_settings("mail")["cache_ttl"])
 
 
 class HTMLText(HTMLParser):

@@ -16,7 +16,7 @@ FINANCE_DB_PATH = os.environ.get("FINANCE_DB_PATH", os.path.join(BASE_DIR, "fina
 
 
 def currency():
-    return app_settings("finance").get("currency", "TL")
+    return app_settings("finance")["currency"]
 
 
 def connect_db():

@@ -12,17 +12,12 @@ from urllib3.util.retry import Retry
 
 load_env()
 
-from settings import app_settings
+from settings import WEATHER_TEMPERATURE_UNITS, app_settings, default_app_setting
 from ui import h, phone_page
 
 # ---- Configuration ----
-DEFAULT_LOCATION_NAME = "Random, change in settings"
-DEFAULT_LATITUDE = 16.16736
-DEFAULT_LONGITUDE = 16.15788
-DEFAULT_TIMEZONE = "Europe/Istanbul"
-DEFAULT_TEMPERATURE_UNIT = "celsius"
 CACHE_TTL = int(os.environ.get("WEATHER_CACHE_TTL", "900"))
-DATA_FILE = os.path.join(os.path.dirname(__file__), "dursunlu_weather.json")
+DATA_FILE = os.path.join(os.path.dirname(__file__), "weather.json")
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
 CURRENT_FIELDS = [
@@ -92,7 +87,7 @@ def create_session():
     adapter = HTTPAdapter(max_retries=retry)
     session.mount("https://", adapter)
     session.mount("http://", adapter)
-    session.headers.update({"User-Agent": "ProjectTCL/1.0"})
+    session.headers.update({"User-Agent": "MiniOS/1.0"})
     return session
 
 
@@ -103,14 +98,14 @@ _cache = {"data": None, "ts": 0, "cfg": None}
 
 def weather_config():
     cfg = app_settings("weather")
-    temp_unit = str(cfg.get("temperature_unit", DEFAULT_TEMPERATURE_UNIT)).lower()
-    if temp_unit not in ("celsius", "fahrenheit"):
-        temp_unit = DEFAULT_TEMPERATURE_UNIT
+    temp_unit = str(cfg["temperature_unit"]).lower()
+    if temp_unit not in WEATHER_TEMPERATURE_UNITS:
+        temp_unit = default_app_setting("weather", "temperature_unit")
     return {
-        "location_name": cfg.get("location_name", DEFAULT_LOCATION_NAME),
-        "latitude": float(cfg.get("latitude", DEFAULT_LATITUDE)),
-        "longitude": float(cfg.get("longitude", DEFAULT_LONGITUDE)),
-        "timezone": cfg.get("timezone", DEFAULT_TIMEZONE),
+        "location_name": cfg["location_name"],
+        "latitude": float(cfg["latitude"]),
+        "longitude": float(cfg["longitude"]),
+        "timezone": cfg["timezone"],
         "temperature_unit": temp_unit,
     }
 

@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 
 load_env()
 
-from settings import app_settings
+from settings import app_settings, default_app_setting
 from ui import h, phone_page
 
 
@@ -30,7 +30,6 @@ RESIZE_IMAGES = os.environ.get("RESIZE_IMAGES", "1") == "1"
 MAX_IMAGE_WIDTH = int(os.environ.get("MAX_IMAGE_WIDTH", "800"))
 MAX_DOWNLOAD_BYTES = int(os.environ.get("MAX_DOWNLOAD_BYTES", str(8 * 1024 * 1024)))
 MAX_SHOW = 10
-DEFAULT_TIMEZONE = "Europe/Istanbul"
 
 minigram_bp = Blueprint("minigram", __name__)
 
@@ -46,7 +45,7 @@ EMOJI_MAP = {
     "\U0001f609": ";)",
     "\U0001f618": ":3",
     "\u2639\ufe0f": ":(",
-    "\U0001f60b": ":p",
+    "\U0001f61b": ":p",
 }
 ASCII_MAP = {
     "<3": "\U0001f49b",
@@ -56,7 +55,7 @@ ASCII_MAP = {
     ";)": "\U0001f609",
     ":3": "\U0001f618",
     ":(": "\u2639\ufe0f",
-    ":p": "\U0001f60b",
+    ":p": "\U0001f61b",
 }
 
 MINIGRAM_CSS = """
@@ -123,9 +122,9 @@ def normalize_contacts(raw_contacts):
 def minigram_settings():
     current = app_settings("minigram")
     return {
-        "contacts": normalize_contacts(current.get("contacts", [])),
-        "timezone": str(current.get("timezone") or DEFAULT_TIMEZONE).strip() or DEFAULT_TIMEZONE,
-        "timestamp_format": str(current.get("timestamp_format") or "compact").strip() or "compact",
+        "contacts": normalize_contacts(current["contacts"]),
+        "timezone": str(current["timezone"]).strip() or default_app_setting("minigram", "timezone"),
+        "timestamp_format": str(current["timestamp_format"]).strip() or default_app_setting("minigram", "timestamp_format"),
     }
 
 
@@ -146,8 +145,9 @@ def get_timezone():
     try:
         return ZoneInfo(tz_name)
     except Exception:
+        fallback_timezone = default_app_setting("minigram", "timezone")
         try:
-            return ZoneInfo(DEFAULT_TIMEZONE)
+            return ZoneInfo(fallback_timezone)
         except Exception:
             return timezone(timedelta(hours=3))
 

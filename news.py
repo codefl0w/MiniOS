@@ -14,37 +14,12 @@ from flask import redirect, request
 
 load_env()
 
-from settings import app_settings
+from settings import NEWS_LANGUAGES, NEWS_MODES, NEWS_TOPICS, app_settings, default_app_setting
 from ui import h, phone_page
 
 BASE_URL = "https://news.google.com/rss"
-USER_AGENT = os.environ.get("NEWS_USER_AGENT", "ProjectTCL/0.1 personal Google News RSS reader")
+USER_AGENT = os.environ.get("NEWS_USER_AGENT", "MiniOS/0.1 personal Google News RSS reader")
 NEWS_CACHE_TTL = int(os.environ.get("NEWS_CACHE_TTL", "900"))
-DEFAULT_MODE = "topic"
-DEFAULT_TOPIC = "TECHNOLOGY"
-DEFAULT_LANG = "en-US"
-DEFAULT_GEO = "Turkey"
-DEFAULT_QUERY = "technology"
-
-TOPICS = [
-    "WORLD",
-    "NATION",
-    "BUSINESS",
-    "TECHNOLOGY",
-    "ENTERTAINMENT",
-    "SCIENCE",
-    "SPORTS",
-    "HEALTH",
-]
-
-LANGUAGES = {
-    "en-US": {"label": "English US", "hl": "en-US", "gl": "US", "ceid": "US:en"},
-    "tr-TR": {"label": "Turkish TR", "hl": "tr", "gl": "TR", "ceid": "TR:tr"},
-    "en-GB": {"label": "English UK", "hl": "en-GB", "gl": "GB", "ceid": "GB:en"},
-    "de-DE": {"label": "German DE", "hl": "de", "gl": "DE", "ceid": "DE:de"},
-    "fr-FR": {"label": "French FR", "hl": "fr", "gl": "FR", "ceid": "FR:fr"},
-    "es-ES": {"label": "Spanish ES", "hl": "es", "gl": "ES", "ceid": "ES:es"},
-}
 
 _cache = {}
 
@@ -98,22 +73,22 @@ def format_date(value):
 
 
 def lang_params(lang):
-    return LANGUAGES.get(lang, LANGUAGES[DEFAULT_LANG])
+    return NEWS_LANGUAGES.get(lang, NEWS_LANGUAGES[default_app_setting("news", "default_lang")])
 
 
 def request_args_from_query():
     cfg = app_settings("news")
-    mode = request.args.get("mode", cfg.get("default_mode", DEFAULT_MODE))
-    topic = request.args.get("topic", cfg.get("default_topic", DEFAULT_TOPIC)).upper()
-    geo = request.args.get("geo", cfg.get("default_geo", DEFAULT_GEO)).strip()
-    query = request.args.get("q", cfg.get("default_query", DEFAULT_QUERY)).strip()
-    lang = request.args.get("lang", cfg.get("default_lang", DEFAULT_LANG))
-    if mode not in ("top", "topic", "geo", "search"):
-        mode = DEFAULT_MODE
-    if topic not in TOPICS:
-        topic = DEFAULT_TOPIC
-    if lang not in LANGUAGES:
-        lang = DEFAULT_LANG
+    mode = request.args.get("mode", cfg["default_mode"])
+    topic = request.args.get("topic", cfg["default_topic"]).upper()
+    geo = request.args.get("geo", cfg["default_geo"]).strip()
+    query = request.args.get("q", cfg["default_query"]).strip()
+    lang = request.args.get("lang", cfg["default_lang"])
+    if mode not in NEWS_MODES:
+        mode = cfg["default_mode"] if cfg["default_mode"] in NEWS_MODES else default_app_setting("news", "default_mode")
+    if topic not in NEWS_TOPICS:
+        topic = cfg["default_topic"] if cfg["default_topic"] in NEWS_TOPICS else default_app_setting("news", "default_topic")
+    if lang not in NEWS_LANGUAGES:
+        lang = cfg["default_lang"] if cfg["default_lang"] in NEWS_LANGUAGES else default_app_setting("news", "default_lang")
     return {"mode": mode, "topic": topic, "geo": geo, "q": query, "lang": lang}
 
 
@@ -214,11 +189,11 @@ input[type=submit]{background:#95e1ff;color:#000;border:0;padding:6px 8px;font-s
 def render_controls(base, params):
     body = "<div class='bar'>"
     body += f"<a href='{feed_link(base, params, mode='top')}'>Top</a> "
-    for topic in TOPICS:
+    for topic in NEWS_TOPICS:
         body += f"<a href='{feed_link(base, params, mode='topic', topic=topic)}'>{h(topic[:4])}</a> "
     body += "</div>"
     body += "<div class='bar'>"
-    for lang, data in LANGUAGES.items():
+    for lang, data in NEWS_LANGUAGES.items():
         body += f"<a href='{feed_link(base, params, lang=lang)}'>{h(lang)}</a> "
     body += "</div>"
     body += f"""

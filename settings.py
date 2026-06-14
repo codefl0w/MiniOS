@@ -12,6 +12,28 @@ from ui import h, phone_page
 BASE_DIR = os.path.dirname(__file__)
 SETTINGS_PATH = os.environ.get("MINIOS_SETTINGS_PATH", os.path.join(BASE_DIR, "settings.json"))
 
+BOARD_SORTS = ("hot", "new", "top")
+NEWS_MODES = ("top", "topic", "geo", "search")
+NEWS_TOPICS = (
+    "WORLD",
+    "NATION",
+    "BUSINESS",
+    "TECHNOLOGY",
+    "ENTERTAINMENT",
+    "SCIENCE",
+    "SPORTS",
+    "HEALTH",
+)
+NEWS_LANGUAGES = {
+    "en-US": {"label": "English US", "hl": "en-US", "gl": "US", "ceid": "US:en"},
+    "tr-TR": {"label": "Turkish TR", "hl": "tr", "gl": "TR", "ceid": "TR:tr"},
+    "en-GB": {"label": "English UK", "hl": "en-GB", "gl": "GB", "ceid": "GB:en"},
+    "de-DE": {"label": "German DE", "hl": "de", "gl": "DE", "ceid": "DE:de"},
+    "fr-FR": {"label": "French FR", "hl": "fr", "gl": "FR", "ceid": "FR:fr"},
+    "es-ES": {"label": "Spanish ES", "hl": "es", "gl": "ES", "ceid": "ES:es"},
+}
+WEATHER_TEMPERATURE_UNITS = ("celsius", "fahrenheit")
+
 DEFAULTS = {
     "minigram": {
         "contacts": [],
@@ -19,25 +41,25 @@ DEFAULTS = {
         "timestamp_format": "compact",
     },
     "weather": {
-        "location_name": "Dursunlu",
-        "latitude": 36.16736,
-        "longitude": 36.15788,
+        "location_name": "Change in settings",
+        "latitude": 16.16736,
+        "longitude": 16.15788,
         "timezone": "Europe/Istanbul",
         "temperature_unit": "celsius",
     },
     "finance": {
-        "currency": "TL",
+        "currency": "USD",
     },
     "boards": {
         "subreddits": [
-            "4chan",
-            "fightporn",
-            "greentext",
-            "itrunsdoom",
-            "PSVitaHomebrew",
-            "vita",
-            "vitahacks",
-            "vitapiracy",
+            "blank",
+            "blank",
+            "blank",
+            "blank",
+            "blank",
+            "blank",
+            "blank",
+            "blank",
         ],
         "default_sort": "hot",
     },
@@ -96,6 +118,10 @@ def save_settings(data):
 
 def app_settings(name):
     return load_settings().get(name, deepcopy(DEFAULTS.get(name, {})))
+
+
+def default_app_setting(name, key):
+    return deepcopy(DEFAULTS[name][key])
 
 
 def update_app_settings(name, values):
@@ -196,20 +222,20 @@ def register_settings_routes(flask_app, prefix="/settings"):
     @flask_app.route(base + "/minigram", methods=["GET", "POST"])
     def settings_minigram():
         current = app_settings("minigram")
-        contacts = normalize_minigram_contacts(current.get("contacts", []))
+        contacts = normalize_minigram_contacts(current["contacts"])
         error = ""
 
         if request.method == "POST":
             action = request.form.get("action", "prefs")
             if action == "prefs":
-                fmt = request.form.get("timestamp_format", "").strip() or current.get("timestamp_format", "compact")
+                fmt = request.form.get("timestamp_format", "").strip() or current["timestamp_format"]
                 if fmt not in ("compact", "full"):
-                    fmt = "compact"
+                    fmt = current["timestamp_format"]
                 update_app_settings(
                     "minigram",
                     {
                         "contacts": contacts,
-                        "timezone": request.form.get("timezone", "").strip() or current.get("timezone", "Europe/Istanbul"),
+                        "timezone": request.form.get("timezone", "").strip() or current["timezone"],
                         "timestamp_format": fmt,
                     },
                 )
@@ -242,8 +268,8 @@ def register_settings_routes(flask_app, prefix="/settings"):
                     update_app_settings("minigram", {"contacts": contacts})
                     return redirect(base + "/minigram")
 
-        tz = current.get("timezone", "Europe/Istanbul")
-        fmt = current.get("timestamp_format", "compact")
+        tz = current["timezone"]
+        fmt = current["timestamp_format"]
         error_html = f"<div class='body'>{h(error)}</div>" if error else ""
         contact_html = "<div class='body'><strong>Contacts</strong><br>"
         if contacts:
@@ -287,6 +313,9 @@ def register_settings_routes(flask_app, prefix="/settings"):
     def settings_weather():
         current = app_settings("weather")
         if request.method == "POST":
+            temp_unit = request.form.get("temperature_unit", "").strip() or current["temperature_unit"]
+            if temp_unit not in WEATHER_TEMPERATURE_UNITS:
+                temp_unit = current["temperature_unit"]
             update_app_settings(
                 "weather",
                 {
@@ -294,18 +323,18 @@ def register_settings_routes(flask_app, prefix="/settings"):
                     "latitude": as_float(request.form.get("latitude"), current["latitude"]),
                     "longitude": as_float(request.form.get("longitude"), current["longitude"]),
                     "timezone": request.form.get("timezone", "").strip() or current["timezone"],
-                    "temperature_unit": request.form.get("temperature_unit", "").strip() or current["temperature_unit"],
+                    "temperature_unit": temp_unit,
                 },
             )
             return redirect(base)
-        temp_unit = current.get("temperature_unit", "celsius")
+        temp_unit = current["temperature_unit"]
         body = f"""
 <form method="post" action="{base}/weather">
 {field("Location name", f'<input type="text" name="location_name" value="{h(current["location_name"])}">')}
 {field("Latitude", f'<input type="text" name="latitude" value="{h(current["latitude"])}">')}
 {field("Longitude", f'<input type="text" name="longitude" value="{h(current["longitude"])}">')}
 {field("Timezone", f'<input type="text" name="timezone" value="{h(current["timezone"])}">', "Example: Europe/Istanbul")}
-{field("Temperature unit", f'<input type="text" name="temperature_unit" value="{h(temp_unit)}">', "celsius or fahrenheit")}
+{field("Temperature unit", f'<input type="text" name="temperature_unit" value="{h(temp_unit)}">', " or ".join(WEATHER_TEMPERATURE_UNITS))}
 {save_button()}
 </form>
 """
@@ -329,9 +358,9 @@ def register_settings_routes(flask_app, prefix="/settings"):
     def settings_boards():
         current = app_settings("boards")
         if request.method == "POST":
-            sort = request.form.get("default_sort", "hot")
-            if sort not in ("hot", "new", "top"):
-                sort = "hot"
+            sort = request.form.get("default_sort", current["default_sort"])
+            if sort not in BOARD_SORTS:
+                sort = current["default_sort"]
             update_app_settings(
                 "boards",
                 {
@@ -343,7 +372,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
         body = f"""
 <form method="post" action="{base}/boards">
 {field("Followed subreddits", f'<textarea name="subreddits">{h(list_to_lines(current["subreddits"]))}</textarea>', "One subreddit per line")}
-{field("Default sort", f'<input type="text" name="default_sort" value="{h(current["default_sort"])}">', "hot, new, or top")}
+{field("Default sort", f'<input type="text" name="default_sort" value="{h(current["default_sort"])}">', ", ".join(BOARD_SORTS))}
 {save_button()}
 </form>
 """
@@ -353,12 +382,21 @@ def register_settings_routes(flask_app, prefix="/settings"):
     def settings_news():
         current = app_settings("news")
         if request.method == "POST":
+            mode = request.form.get("default_mode", "").strip() or current["default_mode"]
+            topic = request.form.get("default_topic", "").strip().upper() or current["default_topic"]
+            lang = request.form.get("default_lang", "").strip() or current["default_lang"]
+            if mode not in NEWS_MODES:
+                mode = current["default_mode"]
+            if topic not in NEWS_TOPICS:
+                topic = current["default_topic"]
+            if lang not in NEWS_LANGUAGES:
+                lang = current["default_lang"]
             update_app_settings(
                 "news",
                 {
-                    "default_mode": request.form.get("default_mode", "").strip() or current["default_mode"],
-                    "default_topic": request.form.get("default_topic", "").strip().upper() or current["default_topic"],
-                    "default_lang": request.form.get("default_lang", "").strip() or current["default_lang"],
+                    "default_mode": mode,
+                    "default_topic": topic,
+                    "default_lang": lang,
                     "default_geo": request.form.get("default_geo", "").strip() or current["default_geo"],
                     "default_query": request.form.get("default_query", "").strip() or current["default_query"],
                 },
@@ -366,9 +404,9 @@ def register_settings_routes(flask_app, prefix="/settings"):
             return redirect(base)
         body = f"""
 <form method="post" action="{base}/news">
-{field("Default mode", f'<input type="text" name="default_mode" value="{h(current["default_mode"])}">', "top, topic, geo, or search")}
-{field("Default topic", f'<input type="text" name="default_topic" value="{h(current["default_topic"])}">', "WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SCIENCE, SPORTS, HEALTH")}
-{field("Default language", f'<input type="text" name="default_lang" value="{h(current["default_lang"])}">', "Example: en-US or tr-TR")}
+{field("Default mode", f'<input type="text" name="default_mode" value="{h(current["default_mode"])}">', ", ".join(NEWS_MODES))}
+{field("Default topic", f'<input type="text" name="default_topic" value="{h(current["default_topic"])}">', ", ".join(NEWS_TOPICS))}
+{field("Default language", f'<input type="text" name="default_lang" value="{h(current["default_lang"])}">', ", ".join(NEWS_LANGUAGES.keys()))}
 {field("Default geo", f'<input type="text" name="default_geo" value="{h(current["default_geo"])}">', "Used by geo mode")}
 {field("Default search query", f'<input type="text" name="default_query" value="{h(current["default_query"])}">', "Used by search mode")}
 {save_button()}

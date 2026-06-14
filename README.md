@@ -1,4 +1,5 @@
 
+
 <p align="center">
   <img
     width="512"
@@ -28,7 +29,6 @@
   * [PythonAnywhere](#pythonanywhere)
   * [Render](#render)
   * [Railway](#railway)
-  * [Vercel](#vercel)
   * [Other hosts](#other-hosts)
 * [.env](#env)
 
@@ -98,7 +98,7 @@ Good options:
 
 | Host           | Status      | Notes                                                                |
 | -------------- | ----------- | -------------------------------------------------------------------- |
-| PythonAnywhere | Recommended | Simple Flask hosting, good for personal MiniOS instances. Doesn't have native .env support.            |
+| PythonAnywhere | Recommended | Simple Flask hosting, best free tier for MiniOS instances. Doesn't have native .env support.            |
 | Render         | Partial        | Easy GitHub deployment. Free services will sleep after inactivity.                     |
 | Railway        | Good        | Easy GitHub deployment and environment variables. Limits are not ideal. |
 | Fly.io         | Good        | More technical, but suitable for small Flask apps.                   |
@@ -115,8 +115,8 @@ PythonAnywhere is the most straightforward host for MiniOS.
 Basic setup:
 
 1. Create a PythonAnywhere account.
-2. Create a web app. Make sure it's named `main.py`, not `flask_app.py`.
-3. Navigate to your files, where you see `main.py`. Upload all MiniOS scripts and icons. Make sure you don't change the project structure.
+2. Create a web app and select Flask when asked. Make sure you rename the quickstart script from `flask_app.py` to `main.py` .
+3. Navigate to your files, where you see `main.py`. Upload all MiniOS scripts. Create an `icons` directory and upload all icons as well. Make sure you don't change the project structure.
 4. Navigate to the **Web** section and reload your site.
 
 
@@ -161,15 +161,6 @@ Start command: python main.py
 `````
 
 Use Railway variables for secrets instead of committing `.env`, same as Render above.
-
-
-### Vercel
-
-Vercel is not recommended for the default MiniOS setup.
-
-MiniOS is a Flask app. Vercel mainly uses serverless functions, so the project would need adaptation before it can run there properly.
-
-Use Vercel only if you specifically want to convert MiniOS into a serverless-compatible app.
 
 
 ### Other hosts
@@ -280,23 +271,61 @@ Do not store passwords, tokens, API keys, mail credentials, or bot secrets in `s
 
 ## Apps
 
-MiniOS currently has these apps, with the following functionalities:
+MiniOS currently has 8 apps, with the following functionalities:
 
 ### Minigram
 
-Minimal Telegram web client. 
+Minimal Telegram web client. Only for texting trusted contacts, not suitable for groupchats.
+
+Minigram supports these features:
 
 |Action|  Support| Description |
 |--|--| -- |
 | Send messages | ✅ |
-| Receive messages | ✅ |
-| Send Emojis|✅  | Minigram has an ASCII-to-Emoji conversion feature. When you send "<3", the receiver sees a "❤️" instead.
-| Receive Emojis| ✅ | The same feature works the other way too. See all supported emojis below.
-| Send pictures| ❌| 
+| Receive messages | ✅ | 
+| Send Emojis|✅  | Minigram has an ASCII-to-Emoji conversion feature. When you send "<3", the receiver sees a "💛" instead.
+| Receive Emojis| ✅ | The same feature works the other way too. See all supported emojis below. 
+| Send pictures| ❌| MocorOS likely doesn't support uploads. To be tested and maybe changed later on.
 | Receive pictures| ✅ | Minigram can download the pictures, downscale them and display them in the chat UI directly.
 | Send stickers| ❌ | 
 | Receive stickers| ❌ | Could change in future updates.
 
+
+#### Emoji conversion
+
+Minigram converts simple ASCII expressions into emojis when sending messages. When receiving messages, supported emojis are converted back into ASCII so they can be displayed reliably on limited browsers.
+
+**Sending**
+
+| Typed in Minigram | Sent as |
+| ----------------- | ------- |
+| `<3`              | 💛      |
+| `:)`              | 🙂      |
+| `:D`              | 😀      |
+| `:'D`             | 😂      |
+| `;)`              | 😉      |
+| `:3`              | 😘      |
+| `:(`              | ☹️      |
+| `:p`              | 😛      |
+
+**Receiving**
+
+| Received emoji | Shown in Minigram |
+| -------------- | ----------------- |
+| 💛             | `<3`              |
+| ❤️             | `<3`              |
+| 💙             | `<3`              |
+| 💚             | `<3`              |
+| 💜             | `<3`              |
+| 🙂             | `:)`              |
+| 😀             | `:D`              |
+| 😂             | `:'D`             |
+| 😉             | `;)`              |
+| 😘             | `:3`              |
+| ☹️             | `:(`              |
+| 😛             | `:p`              |
+
+Most heart emojis are collapsed into `<3` when received. Sending `<3` currently sends the yellow heart (💛).
 
 
 
@@ -305,17 +334,17 @@ Minimal Telegram web client.
 
 Simple weather app based on Open-Meteo metrics. Shows the current and oncoming weather, as well as extra information such as pressure, humidity etc.
 
-Temperature can be displayed in either celcius or fahrenheit. You can change this from the settings app any time.
+Temperature can be displayed in either celcius or fahrenheit. You can change this from the settings app any time, along with your desired location.
 
 ### Notes
 
-Simple notes app. Supports saving infinite notes.
+Simple notes app. Supports saving unlimited notes.
 
 ### AI
 
 Simple AI chat based on Google Gemini. Supports sending and receiving plain text.
 
-Gemini's responses will be short and plain, based on the system prompt send by the AI script.
+Gemini's responses will be short and plain, as declared on the system prompt in `ai.py`.
 
 ### Finance
 

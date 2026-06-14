@@ -13,22 +13,9 @@ from flask import redirect, request
 
 load_env()
 
-from settings import app_settings
+from settings import BOARD_SORTS, app_settings, default_app_setting
 from ui import h, phone_page
 
-DEFAULT_SUBREDDITS = [
-    "dumbphones",
-    "blank",
-    "blank",
-    "blank",
-    "blank",
-    "blank",
-    "blank",
-    "blank",
-    "blank",
-    "blank",
-]
-SORTS = ["hot", "new", "top"]
 CACHE_TTL = int(os.environ.get("BOARDS_CACHE_TTL", "600"))
 USER_AGENT = os.environ.get("BOARDS_USER_AGENT", "MiniOS/0.1 personal feature-phone RSS reader")
 BASE_URL = "https://www.reddit.com/r/{sub}/{sort}/.rss"
@@ -38,7 +25,7 @@ _cache = {}
 
 
 def subreddits():
-    values = app_settings("boards").get("subreddits", DEFAULT_SUBREDDITS)
+    values = app_settings("boards")["subreddits"]
     return [str(value).strip() for value in values if str(value).strip()]
 
 
@@ -47,8 +34,8 @@ def sub_lookup():
 
 
 def default_sort():
-    sort = app_settings("boards").get("default_sort", "hot")
-    return sort if sort in SORTS else "hot"
+    sort = app_settings("boards")["default_sort"]
+    return sort if sort in BOARD_SORTS else default_app_setting("boards", "default_sort")
 
 
 class ContentParser(HTMLParser):
@@ -154,7 +141,7 @@ def feed_url(sub, sort):
 
 def fetch_feed(sub, sort="hot", force=False):
     sub = sub_lookup().get(sub.lower(), sub)
-    sort = sort if sort in SORTS else default_sort()
+    sort = sort if sort in BOARD_SORTS else default_sort()
     key = (sub.lower(), sort)
     now = time.time()
     cached = _cache.get(key)
@@ -175,7 +162,7 @@ def get_feed(sub, sort="hot", force=False):
     try:
         return fetch_feed(sub, sort=sort, force=force)
     except Exception as exc:
-        key = (sub.lower(), sort if sort in SORTS else default_sort())
+        key = (sub.lower(), sort if sort in BOARD_SORTS else default_sort())
         cached = _cache.get(key)
         if cached:
             cached = dict(cached)
@@ -185,7 +172,7 @@ def get_feed(sub, sort="hot", force=False):
 
 
 def find_post(sub, post_id):
-    for sort in SORTS:
+    for sort in BOARD_SORTS:
         feed = get_feed(sub, sort=sort)
         for item in feed["entries"]:
             if item["id"] == post_id:
@@ -226,10 +213,10 @@ def register_boards_routes(flask_app, prefix="/boards"):
         if not canonical:
             return redirect(base)
         sort = request.args.get("sort", default_sort())
-        sort = sort if sort in SORTS else default_sort()
+        sort = sort if sort in BOARD_SORTS else default_sort()
         force = request.args.get("refresh") == "1"
         feed = get_feed(canonical, sort=sort, force=force)
-        sort_links = " ".join(f"<a href='{base}/{h(canonical)}?sort={s}'>{s}</a>" for s in SORTS)
+        sort_links = " ".join(f"<a href='{base}/{h(canonical)}?sort={s}'>{s}</a>" for s in BOARD_SORTS)
         body = f"<div class='small'>{sort_links} | <a href='{base}/{h(canonical)}?sort={sort}&refresh=1'>refresh</a></div>"
         if feed.get("error"):
             body += f"<div class='err'>Fetch error: {h(feed['error'])}</div>"
