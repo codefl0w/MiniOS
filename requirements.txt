@@ -2,3 +2,6 @@ Flask
 requests
 urllib3
 Pillow
+lxml
+readability-lxml
+googlenewsdecoder

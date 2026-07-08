@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from copy import deepcopy
 
 from env_loader import load_env
@@ -33,6 +34,7 @@ NEWS_LANGUAGES = {
     "es-ES": {"label": "Spanish ES", "hl": "es", "gl": "ES", "ceid": "ES:es"},
 }
 WEATHER_TEMPERATURE_UNITS = ("celsius", "fahrenheit")
+MANAGEABLE_APPS = ("Minigram", "Weather", "Notes", "AI", "Finance", "Boards", "Gmail", "News")
 
 DEFAULTS = {
     "minigram": {
@@ -67,12 +69,21 @@ DEFAULTS = {
         "default_mode": "topic",
         "default_topic": "TECHNOLOGY",
         "default_lang": "en-US",
-        "default_geo": "Turkey",
+        "default_geo": "USA",
         "default_query": "technology",
     },
     "mail": {
         "limit": 40,
         "cache_ttl": 600,
+    },
+    "apps": {
+        "disabled": [],
+    },
+    "ui": {
+        "bg_color": "#191f2e",
+        "icon_size": 44,
+        "cell_height": 82,
+        "font_size": 13,
     },
 }
 
@@ -206,6 +217,8 @@ def register_settings_routes(flask_app, prefix="/settings"):
     @flask_app.route(base + "/")
     def settings_index():
         rows = [
+            ("Apps", "Enable or disable apps", f"{base}/apps"),
+            ("Appearance", "Colors and sizes", f"{base}/ui"),
             ("Minigram", "Contacts and timestamps", f"{base}/minigram"),
             ("Weather", "Location and coordinates", f"{base}/weather"),
             ("Finance", "Currency", f"{base}/finance"),
@@ -436,12 +449,87 @@ def register_settings_routes(flask_app, prefix="/settings"):
 """
         return phone_page("Gmail Settings", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
 
+    @flask_app.route(base + "/apps", methods=["GET", "POST"])
+    def settings_apps():
+        current = app_settings("apps")
+        disabled = list(current.get("disabled", []))
+
+        if request.method == "POST":
+            app_name = request.form.get("app", "")
+            if app_name in MANAGEABLE_APPS:
+                if app_name in disabled:
+                    disabled.remove(app_name)
+                else:
+                    disabled.append(app_name)
+                update_app_settings("apps", {"disabled": disabled})
+            return redirect(base + "/apps")
+
+        body = ""
+        for app_name in MANAGEABLE_APPS:
+            is_disabled = app_name in disabled
+            status = "<span style='color:#ff8b8b'>OFF</span>" if is_disabled else "<span style='color:#6fcf97'>ON</span>"
+            action = "Enable" if is_disabled else "Disable"
+            body += f"""
+<form method="post" action="{base}/apps">
+<input type="hidden" name="app" value="{h(app_name)}">
+<div class="row"><strong>{h(app_name)}</strong> {status}
+<input type="submit" value="{action}" style="float:right;">
+</div>
+</form>
+"""
+        return phone_page("App Manager", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+
+    @flask_app.route(base + "/ui", methods=["GET", "POST"])
+    def settings_ui():
+        current = app_settings("ui")
+        if request.method == "POST":
+            action = request.form.get("action", "save")
+            if action == "reset":
+                update_app_settings("ui", {
+                    "bg_color": default_app_setting("ui", "bg_color"),
+                    "icon_size": default_app_setting("ui", "icon_size"),
+                    "cell_height": default_app_setting("ui", "cell_height"),
+                    "font_size": default_app_setting("ui", "font_size"),
+                })
+            else:
+                bg_raw = request.form.get("bg_color", "").strip()
+                if bg_raw and re.match(r'^#[0-9a-fA-F]{6}$', bg_raw):
+                    bg_color = bg_raw
+                else:
+                    bg_color = current["bg_color"]
+                icon_size = as_int(request.form.get("icon_size"), current["icon_size"])
+                cell_height = as_int(request.form.get("cell_height"), current["cell_height"])
+                font_size = as_int(request.form.get("font_size"), current["font_size"])
+                update_app_settings("ui", {
+                    "bg_color": bg_color,
+                    "icon_size": icon_size,
+                    "cell_height": cell_height,
+                    "font_size": font_size,
+                })
+            return redirect(base + "/ui")
+
+        body = f"""
+<form method="post" action="{base}/ui">
+<input type="hidden" name="action" value="save">
+{field("Background Color (Hex)", f'<input type="text" name="bg_color" value="{h(current["bg_color"])}">', hint="Format: #RRGGBB")}
+{field("Icon Size (px)", f'<input type="text" name="icon_size" value="{h(current["icon_size"])}">')}
+{field("Cell Height (px)", f'<input type="text" name="cell_height" value="{h(current["cell_height"])}">')}
+{field("Font Size (px)", f'<input type="text" name="font_size" value="{h(current["font_size"])}">', hint="May be overridden by the browser")}
+<input type="submit" value="Save">
+</form>
+<form method="post" action="{base}/ui" style="margin-top: 15px;">
+<input type="hidden" name="action" value="reset">
+<input type="submit" value="Reset to Defaults" style="background: #ff8b8b;">
+</form>
+"""
+        return phone_page("Appearance", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+
     @flask_app.route(base + "/about")
     def settings_about():
         body = """
-<div class="row"><strong>MiniOS Version:</strong><span class="small">V1.0.0</span></div>
+<div class="row"><strong>MiniOS Version:</strong><span class="small">V1.1.0</span></div>
 <div class="row"><strong>Made by:</strong><span class="small">fl0w</span></div>
 <div class="row"><strong>Platform:</strong><span class="small">Flask</span></div>
-<div class="row"><strong>Target:</strong><span class="small">Opera Mini / Dorado @ 240x320</span></div>
+<div class="row"><strong>Target:</strong><span class="small">Opera Mini / Dorado</span></div>
 """
         return phone_page("About", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)

@@ -54,10 +54,11 @@ except Exception as exc:
     NOTES_IMPORT_ERROR = exc
 
 try:
-    from settings import register_settings_routes
+    from settings import register_settings_routes, app_settings
     SETTINGS_IMPORT_ERROR = None
 except Exception as exc:
     register_settings_routes = None
+    app_settings = None
     SETTINGS_IMPORT_ERROR = exc
 
 try:
@@ -110,6 +111,13 @@ def app_icon(filename):
 
 @app.route("/")
 def root():
+    disabled_apps = []
+    if app_settings:
+        try:
+            disabled_apps = app_settings("apps").get("disabled", [])
+        except Exception:
+            pass
+
     apps = [
         {"name": "Minigram", "label": "TG Mini", "url": "/contacts", "icon": "minigram.png"},
         {"name": "Weather", "url": "/weather", "icon": "weather.png", "disabled": WEATHER_IMPORT_ERROR is not None},
@@ -121,20 +129,21 @@ def root():
         {"name": "News", "url": "/news", "icon": "news.png", "disabled": NEWS_IMPORT_ERROR is not None},
         {"name": "Settings", "label": "Settings", "url": "/settings", "icon": "settings.png", "disabled": SETTINGS_IMPORT_ERROR is not None},
     ]
+    apps = [a for a in apps if a["name"] not in disabled_apps]
     body, css = app_drawer(apps)
-    if WEATHER_IMPORT_ERROR:
+    if WEATHER_IMPORT_ERROR and "Weather" not in disabled_apps:
         body += f"<div class='muted'>Weather unavailable: {html_escape(str(WEATHER_IMPORT_ERROR))}</div>"
-    if NOTES_IMPORT_ERROR:
+    if NOTES_IMPORT_ERROR and "Notes" not in disabled_apps:
         body += f"<div class='muted'>Notes unavailable: {html_escape(str(NOTES_IMPORT_ERROR))}</div>"
-    if AI_IMPORT_ERROR:
+    if AI_IMPORT_ERROR and "AI" not in disabled_apps:
         body += f"<div class='muted'>AI unavailable: {html_escape(str(AI_IMPORT_ERROR))}</div>"
-    if FINANCE_IMPORT_ERROR:
+    if FINANCE_IMPORT_ERROR and "Finance" not in disabled_apps:
         body += f"<div class='muted'>Finance unavailable: {html_escape(str(FINANCE_IMPORT_ERROR))}</div>"
-    if BOARDS_IMPORT_ERROR:
+    if BOARDS_IMPORT_ERROR and "Boards" not in disabled_apps:
         body += f"<div class='muted'>Boards unavailable: {html_escape(str(BOARDS_IMPORT_ERROR))}</div>"
-    if MAIL_IMPORT_ERROR:
+    if MAIL_IMPORT_ERROR and "Gmail" not in disabled_apps:
         body += f"<div class='muted'>Gmail unavailable: {html_escape(str(MAIL_IMPORT_ERROR))}</div>"
-    if NEWS_IMPORT_ERROR:
+    if NEWS_IMPORT_ERROR and "News" not in disabled_apps:
         body += f"<div class='muted'>News unavailable: {html_escape(str(NEWS_IMPORT_ERROR))}</div>"
     if SETTINGS_IMPORT_ERROR:
         body += f"<div class='muted'>Settings unavailable: {html_escape(str(SETTINGS_IMPORT_ERROR))}</div>"

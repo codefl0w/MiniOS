@@ -6,4 +6,5 @@ uploads/
 test_media/
 settings.json
 *_weather.json
+weather.json
 .env
