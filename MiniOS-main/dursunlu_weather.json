@@ -1,0 +1,169 @@
+{
+  "current": {
+    "location": "Dursunlu",
+    "time": "00:15",
+    "temp": "21.1°C",
+    "felt_temp": "22.6°C",
+    "humidity": "89%",
+    "wind": "13.8km/h",
+    "wind_dir": "237°",
+    "pressure": "1008.7hPa",
+    "precip": "0.0mm",
+    "cloudiness": "47%",
+    "condition": "Partly cloudy",
+    "weather_code": 2
+  },
+  "hourly": [
+    {
+      "time": "00:00",
+      "temp": "21.2°C",
+      "felt_temp": "22.6°C",
+      "humidity": "88%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "14.4km/h",
+      "cloudiness": "44%",
+      "condition": "Partly cloudy",
+      "weather_code": 2
+    },
+    {
+      "time": "01:00",
+      "temp": "20.9°C",
+      "felt_temp": "22.9°C",
+      "humidity": "92%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "11.2km/h",
+      "cloudiness": "57%",
+      "condition": "Partly cloudy",
+      "weather_code": 2
+    },
+    {
+      "time": "02:00",
+      "temp": "20.8°C",
+      "felt_temp": "23.2°C",
+      "humidity": "94%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "9.9km/h",
+      "cloudiness": "62%",
+      "condition": "Partly cloudy",
+      "weather_code": 2
+    },
+    {
+      "time": "03:00",
+      "temp": "21.0°C",
+      "felt_temp": "23.0°C",
+      "humidity": "94%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "12.3km/h",
+      "cloudiness": "66%",
+      "condition": "Partly cloudy",
+      "weather_code": 2
+    },
+    {
+      "time": "04:00",
+      "temp": "20.7°C",
+      "felt_temp": "21.9°C",
+      "humidity": "93%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "17.0km/h",
+      "cloudiness": "79%",
+      "condition": "Partly cloudy",
+      "weather_code": 2
+    },
+    {
+      "time": "05:00",
+      "temp": "20.5°C",
+      "felt_temp": "21.5°C",
+      "humidity": "91%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "16.7km/h",
+      "cloudiness": "75%",
+      "condition": "Partly cloudy",
+      "weather_code": 2
+    },
+    {
+      "time": "06:00",
+      "temp": "20.3°C",
+      "felt_temp": "20.9°C",
+      "humidity": "90%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "17.3km/h",
+      "cloudiness": "67%",
+      "condition": "Partly cloudy",
+      "weather_code": 2
+    },
+    {
+      "time": "07:00",
+      "temp": "20.9°C",
+      "felt_temp": "21.4°C",
+      "humidity": "88%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "19.0km/h",
+      "cloudiness": "71%",
+      "condition": "Partly cloudy",
+      "weather_code": 2
+    },
+    {
+      "time": "08:00",
+      "temp": "22.2°C",
+      "felt_temp": "22.6°C",
+      "humidity": "83%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "21.1km/h",
+      "cloudiness": "61%",
+      "condition": "Partly cloudy",
+      "weather_code": 2
+    },
+    {
+      "time": "09:00",
+      "temp": "23.3°C",
+      "felt_temp": "23.2°C",
+      "humidity": "80%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "26.1km/h",
+      "cloudiness": "52%",
+      "condition": "Mostly clear",
+      "weather_code": 1
+    },
+    {
+      "time": "10:00",
+      "temp": "24.2°C",
+      "felt_temp": "24.3°C",
+      "humidity": "77%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "29.2km/h",
+      "cloudiness": "37%",
+      "condition": "Mostly clear",
+      "weather_code": 1
+    },
+    {
+      "time": "11:00",
+      "temp": "25.0°C",
+      "felt_temp": "25.2°C",
+      "humidity": "73%",
+      "precip_prob": "0%",
+      "precip": "0.0mm",
+      "wind": "32.6km/h",
+      "cloudiness": "42%",
+      "condition": "Partly cloudy",
+      "weather_code": 2
+    }
+  ],
+  "meta": {
+    "source": "Open-Meteo",
+    "attribution": "Weather data by Open-Meteo.com",
+    "last_updated": "2026-06-13 22:20",
+    "coordinates": "36.16736,36.15788",
+    "timezone": "Europe/Istanbul"
+  }
+}
