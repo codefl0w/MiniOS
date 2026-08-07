@@ -17,7 +17,7 @@
 <p align="center">
   <img
     alt="MiniOS Version"
-    src="https://codefl0w.xyz/gh-boards/out/codefl0w/profile/badge_custom_2.svg"
+    src="https://codefl0w.xyz/gh-boards/out/codefl0w/profile/badge_custom_4.svg"
   />
 
 
