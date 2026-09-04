@@ -278,7 +278,7 @@ Do not store passwords, tokens, API keys, mail credentials, or bot secrets in `s
 
 ## Apps
 
-MiniOS currently has 8 apps, with the following functionalities:
+MiniOS currently has 9 apps excluding the settings app, with the following functionalities:
 
 ### Minigram
 
@@ -336,7 +336,6 @@ Most heart emojis are collapsed into `<3` when received. Sending `<3` currently 
 
 
 
-
 ### Weather
 
 Simple weather app based on Open-Meteo metrics. Shows the current and oncoming weather, as well as extra information such as pressure, humidity etc.
@@ -363,7 +362,7 @@ RSS-based Reddit reader. Supports displaying posts with text and pictures. Liste
 
 ### News
 
-RSS-based Google News app. Shows short descriptions of news, but full reader isn't ready yet.
+RSS-based Google News app. Lists news with a short description and allows reading the full article within the MiniOS UI.
 
 Default topic or language can be changed from the settings app.
 
@@ -372,6 +371,18 @@ Default topic or language can be changed from the settings app.
 Simple Gmail app. Supports viewing and sending mails. Since Google responds slowly, mails will be cached instead of being reloaded each time.
 
 Cache expiry time and maximum shown mail count can be changed from the settings app.
+
+### DuckDuckGo
+
+Full UI wrapper for html.duckduckgo.com. Inherits MiniOS's styling based on your appearance settings. 
+
+On top of being a UI wrapper, MiniOS's DuckDuckGo app has a reading mode feature similarly to the News app. Instead of navigating to a website, you can read the text elements of any website within MiniOS, also inheriting the styling.
+
+Lastly, MiniOS will cache DuckDuckGo search results and serve them back for much faster responses.
+
+Cache TTL, Reading mode availability, default region and default time filter can be set in the settings app.
+
+
 
 ## Extras
 
