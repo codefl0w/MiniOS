@@ -35,14 +35,20 @@ if [ ! -f "main.py" ]; then
     fi
 fi
 
-# If inside a git repository, pull latest updates (preserving databases and uncommitted files)
+# 2b. Pull latest updates from Git (force-update code while preserving untracked .env/databases)
 if [ -d ".git" ]; then
-    if [ -z "$(git status --porcelain 2>/dev/null)" ]; then
-        echo "[+] Updating MiniOS source from Git (preserving databases and settings)..."
-        git fetch origin main --quiet || true
-        git reset --hard origin/main --quiet || true
-        echo "[+] Code updated to latest commit."
-    fi
+    echo "[+] Fetching latest updates from Git..."
+    git remote set-url origin "$REPO_URL" 2>/dev/null || git remote add origin "$REPO_URL"
+    git fetch origin main
+    git reset --hard origin/main
+    echo "[+] Code updated to: $(git log -1 --oneline)"
+elif [ -f "main.py" ]; then
+    echo "[+] Initializing Git for updates..."
+    git init --quiet
+    git remote add origin "$REPO_URL" 2>/dev/null || git remote set-url origin "$REPO_URL"
+    git fetch origin main
+    git reset --hard origin/main
+    echo "[+] Code updated to: $(git log -1 --oneline)"
 fi
 
 CURRENT_DIR="$(pwd)"
@@ -99,10 +105,15 @@ if [ "$IS_PA" = true ] && [ -n "$WSGI_FILES" ]; then
         cat <<EOF > "$wsgi_file"
 import os
 import sys
+import glob
 
 path = '$CURRENT_DIR'
 if path not in sys.path:
     sys.path.insert(0, path)
+
+for venv_site in glob.glob(os.path.join(path, '.venv', 'lib', 'python*', 'site-packages')):
+    if venv_site not in sys.path:
+        sys.path.insert(0, venv_site)
 
 os.chdir(path)
 

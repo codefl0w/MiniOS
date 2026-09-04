@@ -37,19 +37,22 @@ if (-not (Test-Path "main.py")) {
     }
 }
 
-# If inside a git repository, pull latest updates (preserving databases and uncommitted files)
+# 2b. Pull latest updates from Git (force-update code while preserving untracked .env/databases)
 if (Test-Path ".git") {
-    $dirty = & git status --porcelain
-    if (-not $dirty) {
-        Write-Host "[+] Updating MiniOS source from Git (preserving databases and settings)..."
-        try {
-            git fetch origin main --quiet
-            git reset --hard origin/main --quiet
-            Write-Host "[+] Code updated to latest commit."
-        } catch {
-            Write-Host "[!] Git update skipped: $_"
-        }
-    }
+    Write-Host "[+] Fetching latest updates from Git..."
+    git remote set-url origin $REPO_URL 2>$null
+    git fetch origin main
+    git reset --hard origin/main
+    $latest = git log -1 --oneline
+    Write-Host "[+] Code updated to: $latest"
+} elseif (Test-Path "main.py") {
+    Write-Host "[+] Initializing Git for updates..."
+    git init --quiet
+    git remote add origin $REPO_URL 2>$null
+    git fetch origin main
+    git reset --hard origin/main
+    $latest = git log -1 --oneline
+    Write-Host "[+] Code updated to: $latest"
 }
 
 $CURRENT_DIR = (Get-Location).Path
