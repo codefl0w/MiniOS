@@ -54,11 +54,11 @@ except Exception as exc:
     NOTES_IMPORT_ERROR = exc
 
 try:
-    from search import register_search_routes
-    SEARCH_IMPORT_ERROR = None
+    from duckduckgo import register_duckduckgo_routes
+    DUCKDUCKGO_IMPORT_ERROR = None
 except Exception as exc:
-    register_search_routes = None
-    SEARCH_IMPORT_ERROR = exc
+    register_duckduckgo_routes = None
+    DUCKDUCKGO_IMPORT_ERROR = exc
 
 try:
     from settings import register_settings_routes, app_settings
@@ -91,6 +91,8 @@ if register_ai_routes:
     register_ai_routes(app, "/ai")
 if register_boards_routes:
     register_boards_routes(app, "/boards")
+if register_duckduckgo_routes:
+    register_duckduckgo_routes(app, "/duckduckgo")
 if register_finance_routes:
     register_finance_routes(app, "/finance")
 if register_mail_routes:
@@ -99,8 +101,6 @@ if register_news_routes:
     register_news_routes(app, "/news")
 if register_notes_routes:
     register_notes_routes(app, "/notes")
-if register_search_routes:
-    register_search_routes(app, "/search")
 if register_settings_routes:
     register_settings_routes(app, "/settings")
 if register_weather_routes:
@@ -129,7 +129,7 @@ def root():
 
     apps = [
         {"name": "Minigram", "label": "TG Mini", "url": "/contacts", "icon": "minigram.png"},
-        {"name": "Search", "label": "Search", "url": "/search", "icon": "search.png", "disabled": SEARCH_IMPORT_ERROR is not None},
+        {"name": "DuckDuckGo", "label": "DuckDuckGo", "url": "/duckduckgo", "icon": "duckduckgo.png", "disabled": DUCKDUCKGO_IMPORT_ERROR is not None},
         {"name": "Weather", "url": "/weather", "icon": "weather.png", "disabled": WEATHER_IMPORT_ERROR is not None},
         {"name": "Notes", "url": "/notes", "icon": "notes.png", "disabled": NOTES_IMPORT_ERROR is not None},
         {"name": "AI", "url": "/ai", "icon": "ai.png", "disabled": AI_IMPORT_ERROR is not None},
@@ -141,8 +141,8 @@ def root():
     ]
     apps = [a for a in apps if a["name"] not in disabled_apps]
     body, css = app_drawer(apps)
-    if SEARCH_IMPORT_ERROR and "Search" not in disabled_apps:
-        body += f"<div class='muted'>Search unavailable: {html_escape(str(SEARCH_IMPORT_ERROR))}</div>"
+    if DUCKDUCKGO_IMPORT_ERROR and "DuckDuckGo" not in disabled_apps:
+        body += f"<div class='muted'>DuckDuckGo unavailable: {html_escape(str(DUCKDUCKGO_IMPORT_ERROR))}</div>"
     if WEATHER_IMPORT_ERROR and "Weather" not in disabled_apps:
         body += f"<div class='muted'>Weather unavailable: {html_escape(str(WEATHER_IMPORT_ERROR))}</div>"
     if NOTES_IMPORT_ERROR and "Notes" not in disabled_apps:

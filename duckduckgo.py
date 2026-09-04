@@ -22,9 +22,9 @@ except ImportError:
     READABILITY_AVAILABLE = False
 
 BASE_URL = "https://html.duckduckgo.com/html/"
-USER_AGENT = os.environ.get("SEARCH_USER_AGENT", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-SEARCH_CACHE_TTL = int(os.environ.get("SEARCH_CACHE_TTL", "600"))
-ARTICLE_CACHE_TTL = int(os.environ.get("SEARCH_ARTICLE_CACHE_TTL", "1800"))
+USER_AGENT = os.environ.get("DUCKDUCKGO_USER_AGENT") or os.environ.get("SEARCH_USER_AGENT") or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+DUCKDUCKGO_CACHE_TTL = int((os.environ.get("DUCKDUCKGO_CACHE_TTL") or os.environ.get("SEARCH_CACHE_TTL") or "").strip() or "600")
+ARTICLE_CACHE_TTL = int((os.environ.get("DUCKDUCKGO_ARTICLE_CACHE_TTL") or os.environ.get("SEARCH_ARTICLE_CACHE_TTL") or "").strip() or "1800")
 ARTICLE_MAX_LENGTH = 15000
 
 REGIONS = [
@@ -102,7 +102,7 @@ DATE_FILTERS = [
     ("y", "Past Year"),
 ]
 
-_search_cache = {}
+_duckduckgo_cache = {}
 _article_cache = {}
 
 
@@ -151,19 +151,28 @@ def unpack_ddg_url(raw_url):
     return raw_url
 
 
-def search_config():
+def duckduckgo_config():
     try:
-        return app_settings("search")
+        cfg = app_settings("duckduckgo")
+        if cfg:
+            return cfg
     except Exception:
-        return {
-            "cache_ttl": SEARCH_CACHE_TTL,
-            "reader_mode": True,
-            "default_region": "",
-            "default_time": "",
-        }
+        pass
+    try:
+        cfg = app_settings("search")
+        if cfg:
+            return cfg
+    except Exception:
+        pass
+    return {
+        "cache_ttl": DUCKDUCKGO_CACHE_TTL,
+        "reader_mode": True,
+        "default_region": "",
+        "default_time": "",
+    }
 
 
-def extract_spelling(tree, kl, df, base="/search"):
+def extract_spelling(tree, kl, df, base="/duckduckgo"):
     dym_nodes = tree.cssselect("#did_you_mean, .msg--spelling")
     if not dym_nodes:
         return ""
@@ -188,8 +197,8 @@ def extract_spelling(tree, kl, df, base="/search"):
 def search_duckduckgo(query, kl="", df="", payload_override=None, is_more=False):
     cache_key = (query.strip().lower(), str(kl or ""), str(df or ""))
     now = time.time()
-    ttl = search_config().get("cache_ttl", SEARCH_CACHE_TTL)
-    cached = _search_cache.get(cache_key)
+    ttl = duckduckgo_config().get("cache_ttl", DUCKDUCKGO_CACHE_TTL)
+    cached = _duckduckgo_cache.get(cache_key)
 
     if not is_more and cached and now - cached["ts"] < ttl:
         return cached
@@ -271,17 +280,17 @@ def search_duckduckgo(query, kl="", df="", payload_override=None, is_more=False)
             "ts": now,
             "error": "",
         }
-        _search_cache[cache_key] = result
-        if len(_search_cache) > 100:
-            oldest = min(_search_cache, key=lambda k: _search_cache[k]["ts"])
-            del _search_cache[oldest]
+        _duckduckgo_cache[cache_key] = result
+        if len(_duckduckgo_cache) > 100:
+            oldest = min(_duckduckgo_cache, key=lambda k: _duckduckgo_cache[k]["ts"])
+            del _duckduckgo_cache[oldest]
         return result
 
     except requests.Timeout:
         if is_more and cached:
             cached["error"] = "Show more request timed out."
             return cached
-        return {"query": query, "kl": kl, "df": df, "items": [], "next_page": None, "spelling": "", "ts": now, "error": "Search timed out."}
+        return {"query": query, "kl": kl, "df": df, "items": [], "next_page": None, "spelling": "", "ts": now, "error": "DuckDuckGo search timed out."}
     except Exception as exc:
         if is_more and cached:
             cached["error"] = str(exc)
@@ -324,7 +333,7 @@ def fetch_readable_article(url):
         return {"title": "", "text": "", "url": url, "ts": now, "error": str(exc)}
 
 
-SEARCH_CSS = """
+DUCKDUCKGO_CSS = """
 .search-form{background:#0f1620;border:1px solid #263241;padding:6px;margin:0 0 8px;}
 .search-row{display:block;}
 .search-row input[type=text]{width:72%;box-sizing:border-box;background:#fff;color:#000;border:0;padding:6px;font-size:13px;}
@@ -359,12 +368,12 @@ def build_filter_options(selected_kl, selected_df):
     return kl_html, df_html
 
 
-def register_search_routes(flask_app, prefix="/search"):
+def register_duckduckgo_routes(flask_app, prefix="/duckduckgo"):
     base = prefix.rstrip("/")
 
     @flask_app.route(base, methods=["GET"])
-    def search_index():
-        cfg = search_config()
+    def duckduckgo_index():
+        cfg = duckduckgo_config()
         query = request.args.get("q", "").strip()
         kl = request.args.get("kl")
         if kl is None:
@@ -393,7 +402,7 @@ def register_search_routes(flask_app, prefix="/search"):
 
         if not query:
             body = form_html + "<div class='muted'>Enter query to search web.</div>"
-            return phone_page("Search", body, nav=[("Apps", "/")], extra_css=SEARCH_CSS)
+            return phone_page("DuckDuckGo", body, nav=[("Apps", "/")], extra_css=DUCKDUCKGO_CSS)
 
         payload_override = None
         if is_more:
@@ -456,10 +465,10 @@ def register_search_routes(flask_app, prefix="/search"):
             more_url = f"{base}?{urllib.parse.urlencode(more_params)}"
             body += f"<div class='nav-box'><a href='{h(more_url)}'>Show more</a></div>"
 
-        return phone_page(f"Search: {query}", body, nav=[("Apps", "/"), ("New Search", base)], extra_css=SEARCH_CSS)
+        return phone_page(f"DuckDuckGo: {query}", body, nav=[("Apps", "/"), ("New Search", base)], extra_css=DUCKDUCKGO_CSS)
 
     @flask_app.route(base + "/read", methods=["GET"])
-    def search_read():
+    def duckduckgo_read():
         url = request.args.get("url", "").strip()
         back_q = request.args.get("q", "").strip()
         kl = request.args.get("kl", "")
@@ -472,9 +481,9 @@ def register_search_routes(flask_app, prefix="/search"):
                 back_params["kl"] = kl
             if df:
                 back_params["df"] = df
-            nav_links.append(("Back to Search", f"{base}?{urllib.parse.urlencode(back_params)}"))
+            nav_links.append(("Back to DuckDuckGo", f"{base}?{urllib.parse.urlencode(back_params)}"))
         else:
-            nav_links.append(("Search", base))
+            nav_links.append(("DuckDuckGo", base))
 
         if not url:
             return redirect(base)
@@ -484,7 +493,7 @@ def register_search_routes(flask_app, prefix="/search"):
         if article.get("error"):
             body = f"<div class='err'>{h(article['error'])}</div>"
             body += f"<div class='orig'><a href='{h(url)}'>Open original link</a></div>"
-            return phone_page("Reader", body, nav=nav_links, extra_css=SEARCH_CSS)
+            return phone_page("Reader", body, nav=nav_links, extra_css=DUCKDUCKGO_CSS)
 
         title = h(article.get("title") or "Article")
         body_text = h(article.get("text", ""))
@@ -494,4 +503,10 @@ def register_search_routes(flask_app, prefix="/search"):
         <div class='orig'><a href='{h(url)}'>[Open Original Website]</a></div>
         <div class='article-body'>{body_text}</div>
         """
-        return phone_page(title, body, nav=nav_links, extra_css=SEARCH_CSS)
+        return phone_page(title, body, nav=nav_links, extra_css=DUCKDUCKGO_CSS)
+
+    # Legacy redirect
+    @flask_app.route("/search")
+    def search_redirect():
+        args = dict(request.args)
+        return redirect(f"{base}?{urllib.parse.urlencode(args)}" if args else base)

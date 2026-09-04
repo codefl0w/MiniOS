@@ -34,7 +34,7 @@ NEWS_LANGUAGES = {
     "es-ES": {"label": "Spanish ES", "hl": "es", "gl": "ES", "ceid": "ES:es"},
 }
 WEATHER_TEMPERATURE_UNITS = ("celsius", "fahrenheit")
-MANAGEABLE_APPS = ("Minigram", "Search", "Weather", "Notes", "AI", "Finance", "Boards", "Gmail", "News")
+MANAGEABLE_APPS = ("Minigram", "DuckDuckGo", "Weather", "Notes", "AI", "Finance", "Boards", "Gmail", "News")
 
 DEFAULTS = {
     "minigram": {
@@ -42,7 +42,7 @@ DEFAULTS = {
         "timezone": "Europe/Istanbul",
         "timestamp_format": "compact",
     },
-    "search": {
+    "duckduckgo": {
         "cache_ttl": 600,
         "reader_mode": True,
         "default_region": "",
@@ -225,7 +225,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
         rows = [
             ("Apps", "Enable or disable apps", f"{base}/apps"),
             ("Appearance", "Colors and sizes", f"{base}/ui"),
-            ("Search", "Cache and reader mode", f"{base}/search"),
+            ("DuckDuckGo", "Cache and reader mode", f"{base}/duckduckgo"),
             ("Minigram", "Contacts and timestamps", f"{base}/minigram"),
             ("Weather", "Location and coordinates", f"{base}/weather"),
             ("Finance", "Currency", f"{base}/finance"),
@@ -531,25 +531,28 @@ def register_settings_routes(flask_app, prefix="/settings"):
 """
         return phone_page("Appearance", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
 
+    @flask_app.route(base + "/duckduckgo", methods=["GET", "POST"])
     @flask_app.route(base + "/search", methods=["GET", "POST"])
-    def settings_search():
-        current = app_settings("search")
+    def settings_duckduckgo():
+        current = app_settings("duckduckgo")
+        if not current and "search" in app_settings("search"):
+            current = app_settings("search")
         if request.method == "POST":
             cache_ttl = as_int(request.form.get("cache_ttl"), current["cache_ttl"])
             reader_mode = request.form.get("reader_mode", "").strip().lower() in ("1", "true", "yes", "enabled", "on")
             default_region = request.form.get("default_region", "").strip()
             default_time = request.form.get("default_time", "").strip()
-            update_app_settings("search", {
+            update_app_settings("duckduckgo", {
                 "cache_ttl": max(0, cache_ttl),
                 "reader_mode": reader_mode,
                 "default_region": default_region,
                 "default_time": default_time,
             })
-            return redirect(base + "/search")
+            return redirect(base + "/duckduckgo")
 
         reader_val = "1" if current.get("reader_mode", True) else "0"
         body = f"""
-<form method="post" action="{base}/search">
+<form method="post" action="{base}/duckduckgo">
 {field("Cache TTL (seconds)", f'<input type="text" name="cache_ttl" value="{h(current.get("cache_ttl", 600))}">', "0 to disable search cache")}
 {field("Reader Mode (1=on, 0=off)", f'<input type="text" name="reader_mode" value="{h(reader_val)}">', "Show [Reader] link on search results")}
 {field("Default Region", f'<input type="text" name="default_region" value="{h(current.get("default_region", ""))}">', "Example: us-en, tr-tr, or blank for all")}
@@ -557,7 +560,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 {save_button()}
 </form>
 """
-        return phone_page("Search Settings", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+        return phone_page("DuckDuckGo Settings", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/about")
     def settings_about():
