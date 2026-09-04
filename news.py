@@ -32,6 +32,8 @@ except ImportError:
 BASE_URL = "https://news.google.com/rss"
 USER_AGENT = os.environ.get("NEWS_USER_AGENT", "MiniOS/0.1 personal Google News RSS reader")
 NEWS_CACHE_TTL = int((os.environ.get("NEWS_CACHE_TTL") or "").strip() or "900")
+_cache = {}
+_article_cache = {}
 ARTICLE_CACHE_TTL = int((os.environ.get("NEWS_ARTICLE_CACHE_TTL") or "").strip() or "1800")
 ARTICLE_MAX_LENGTH = 15000
 ARTICLE_MAX_CACHE = 50

@@ -3,13 +3,13 @@ import os
 from html import escape as html_escape
 
 from env_loader import load_env
-from flask import Flask, make_response, send_from_directory
+from flask import Flask, make_response, redirect, request, send_from_directory
 from werkzeug.utils import secure_filename
 
 load_env()
 
 from minigram import PORT, register_minigram_routes
-from ui import app_drawer, phone_page
+from ui import app_drawer, phone_page, welcome_popup
 
 try:
     from ai import register_ai_routes
@@ -61,11 +61,12 @@ except Exception as exc:
     DUCKDUCKGO_IMPORT_ERROR = exc
 
 try:
-    from settings import register_settings_routes, app_settings
+    from settings import register_settings_routes, app_settings, update_app_settings
     SETTINGS_IMPORT_ERROR = None
 except Exception as exc:
     register_settings_routes = None
     app_settings = None
+    update_app_settings = None
     SETTINGS_IMPORT_ERROR = exc
 
 try:
@@ -77,7 +78,9 @@ except Exception as exc:
 
 BASE_DIR = os.path.dirname(__file__)
 ICONS_DIR = os.path.abspath(os.environ.get("ICONS_DIR", os.path.join(BASE_DIR, "icons")))
+GITHUB_RES_DIR = os.path.abspath(os.path.join(BASE_DIR, "github_res"))
 os.makedirs(ICONS_DIR, exist_ok=True)
+os.makedirs(GITHUB_RES_DIR, exist_ok=True)
 BLANK_ICON = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
 )
@@ -115,6 +118,27 @@ def app_icon(filename):
         return send_from_directory(ICONS_DIR, filename)
     resp = make_response(BLANK_ICON)
     resp.headers["Content-Type"] = "image/png"
+    return resp
+
+
+@app.route("/github_res/<path:filename>")
+def github_resource(filename):
+    filename = secure_filename(filename)
+    file_path = os.path.join(GITHUB_RES_DIR, filename)
+    if os.path.isfile(file_path):
+        return send_from_directory(GITHUB_RES_DIR, filename)
+    return make_response("Not found", 404)
+
+
+@app.route("/welcome/dismiss", methods=["GET", "POST"])
+def welcome_dismiss():
+    if update_app_settings:
+        try:
+            update_app_settings("ui", {"welcome_seen": True})
+        except Exception:
+            pass
+    resp = redirect("/")
+    resp.set_cookie("minios_welcome", "1", max_age=31536000, path="/")
     return resp
 
 
@@ -159,6 +183,21 @@ def root():
         body += f"<div class='muted'>News unavailable: {html_escape(str(NEWS_IMPORT_ERROR))}</div>"
     if SETTINGS_IMPORT_ERROR:
         body += f"<div class='muted'>Settings unavailable: {html_escape(str(SETTINGS_IMPORT_ERROR))}</div>"
+
+    welcome_seen = False
+    if app_settings:
+        try:
+            welcome_seen = bool(app_settings("ui").get("welcome_seen", False))
+        except Exception:
+            pass
+    if not welcome_seen and request.cookies.get("minios_welcome") == "1":
+        welcome_seen = True
+
+    if not welcome_seen:
+        pop_html, pop_css = welcome_popup()
+        body += pop_html
+        css += pop_css
+
     return phone_page("MiniOS by fl0w", body, extra_css=css)
 
 

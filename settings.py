@@ -90,6 +90,7 @@ DEFAULTS = {
         "icon_size": 44,
         "cell_height": 82,
         "font_size": 13,
+        "welcome_seen": False,
     },
 }
 
@@ -497,7 +498,11 @@ def register_settings_routes(flask_app, prefix="/settings"):
                     "icon_size": default_app_setting("ui", "icon_size"),
                     "cell_height": default_app_setting("ui", "cell_height"),
                     "font_size": default_app_setting("ui", "font_size"),
+                    "welcome_seen": default_app_setting("ui", "welcome_seen"),
                 })
+                resp = redirect(base + "/ui")
+                resp.delete_cookie("minios_welcome")
+                return resp
             else:
                 bg_raw = request.form.get("bg_color", "").strip()
                 if bg_raw and re.match(r'^#[0-9a-fA-F]{6}$', bg_raw):
@@ -507,14 +512,27 @@ def register_settings_routes(flask_app, prefix="/settings"):
                 icon_size = as_int(request.form.get("icon_size"), current["icon_size"])
                 cell_height = as_int(request.form.get("cell_height"), current["cell_height"])
                 font_size = as_int(request.form.get("font_size"), current["font_size"])
+                show_welcome_raw = request.form.get("show_welcome", "").strip().lower()
+                if show_welcome_raw in ("1", "true", "yes", "on"):
+                    welcome_seen = False
+                elif show_welcome_raw in ("0", "false", "no", "off"):
+                    welcome_seen = True
+                else:
+                    welcome_seen = current.get("welcome_seen", False)
+
                 update_app_settings("ui", {
                     "bg_color": bg_color,
                     "icon_size": icon_size,
                     "cell_height": cell_height,
                     "font_size": font_size,
+                    "welcome_seen": welcome_seen,
                 })
-            return redirect(base + "/ui")
+                resp = redirect(base + "/ui")
+                if not welcome_seen:
+                    resp.delete_cookie("minios_welcome")
+                return resp
 
+        welcome_val = "0" if current.get("welcome_seen", False) else "1"
         body = f"""
 <form method="post" action="{base}/ui">
 <input type="hidden" name="action" value="save">
@@ -522,6 +540,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 {field("Icon Size (px)", f'<input type="text" name="icon_size" value="{h(current["icon_size"])}">')}
 {field("Cell Height (px)", f'<input type="text" name="cell_height" value="{h(current["cell_height"])}">')}
 {field("Font Size (px)", f'<input type="text" name="font_size" value="{h(current["font_size"])}">', hint="May be overridden by the browser")}
+{field("Show Welcome Popup (1=yes, 0=no)", f'<input type="text" name="show_welcome" value="{welcome_val}">', hint="Show welcome dialog on home screen")}
 <input type="submit" value="Save">
 </form>
 <form method="post" action="{base}/ui" style="margin-top: 15px;">
