@@ -48,11 +48,19 @@ PythonAnywhere is the easiest option for a simple free setup as MiniOS doesn't e
 
  Render or Railway can also work well, especially if you prefer GitHub-based deployment.
 
-For local testing, clone or download the repository and install the required packages:
+For local testing, clone or download the repository.
+
+On Linux/macOS:
 
 ```bash
-pip install -r requirements.txt
+bash setup.sh
 ```
+
+On Windows:
+
+Run `setup.bat`.
+
+The setup script creates a virtual environment, installs dependencies, and prepares `.env` automatically.
 
 Then run:
 
@@ -66,25 +74,7 @@ Open MiniOS at:
 http://127.0.0.1:2000/
 ```
 
-If you use a virtual environment:
-
-```bash
-python -m venv .venv
-```
-
-On Linux/macOS:
-
-```bash
-source .venv/bin/activate
-```
-
-On Windows:
-
-```bat
-.venv\Scripts\activate
-```
-
-Then install dependencies and run MiniOS:
+If you prefer to install manually:
 
 ```bash
 pip install -r requirements.txt
@@ -120,10 +110,22 @@ PythonAnywhere is the most straightforward host for MiniOS.
 Basic setup:
 
 1. Create a PythonAnywhere account.
-2. Create a web app and select Flask when asked. Make sure you rename the quickstart script from `flask_app.py` to `main.py` .
-3. Navigate to your files, where you see `main.py`. Upload all MiniOS scripts. Create an `icons` directory and upload all icons as well. Make sure you don't change the project structure.
-4. Navigate to the **Web** section and reload your site.
+2. Open a **Bash** console from your dashboard and run the setup script:
 
+```bash
+curl -sSL https://raw.githubusercontent.com/codefl0w/MiniOS/main/setup.sh | bash
+```
+
+This clones MiniOS, sets up the virtual environment, installs requirements, and configures the WSGI file automatically.
+
+3. Navigate to the **Web** section:
+   - If you haven't created a web app yet, select **Manual configuration** and Python 3.10 (or 3.11).
+   - In the **Virtualenv** section, set the path to `/home/<your-username>/MiniOS/.venv`
+   - In the **Code** section, set **Source code** and **Working directory** to `/home/<your-username>/MiniOS`
+   - Go to ```/home/yourusername/MiniOS``` and edit ```.env``` accordingly.
+   - Reload your site.
+
+To update MiniOS in the future, just run the same command in your Bash console. It will pull the latest version while keeping your `.env` and database files intact.
 
 You can then use your personal MiniOS on your phone. Keep in mind that environment variables only reload once per site reload, so you must reload your website on PythonAnywhere again if you change your variables.
 

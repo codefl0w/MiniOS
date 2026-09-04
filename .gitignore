@@ -8,3 +8,4 @@ settings.json
 *_weather.json
 weather.json
 .env
+.venv

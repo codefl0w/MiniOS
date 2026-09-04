@@ -35,12 +35,14 @@ if [ ! -f "main.py" ]; then
     fi
 fi
 
-# If inside a git repository, pull latest updates (force-update without touching databases/.env)
+# If inside a git repository, pull latest updates (preserving databases and uncommitted files)
 if [ -d ".git" ]; then
-    echo "[+] Updating MiniOS source from Git (preserving databases and settings)..."
-    git fetch origin main --quiet || true
-    git reset --hard origin/main --quiet || true
-    echo "[+] Code updated to latest commit."
+    if [ -z "$(git status --porcelain 2>/dev/null)" ]; then
+        echo "[+] Updating MiniOS source from Git (preserving databases and settings)..."
+        git fetch origin main --quiet || true
+        git reset --hard origin/main --quiet || true
+        echo "[+] Code updated to latest commit."
+    fi
 fi
 
 CURRENT_DIR="$(pwd)"
