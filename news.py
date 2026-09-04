@@ -300,8 +300,40 @@ def article_to_text(html):
     return parser.text()
 
 
+def fetch_via_jina(url):
+    """Fetch full article content via r.jina.ai (allowlisted on PythonAnywhere free tier)."""
+    try:
+        jina_url = f"https://r.jina.ai/{url}"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        resp = requests.get(jina_url, headers=headers, timeout=20)
+        if resp.status_code == 200 and resp.text:
+            text = resp.text
+            title = ""
+            title_match = re.search(r"^Title:\s*(.+)$", text, re.MULTILINE)
+            if title_match:
+                title = title_match.group(1).strip()
+            if "Markdown Content:" in text:
+                body = text.split("Markdown Content:", 1)[1].strip()
+            else:
+                body = text
+            if len(body) > ARTICLE_MAX_LENGTH:
+                body = body[:ARTICLE_MAX_LENGTH] + "\n\n[article trimmed]"
+            if len(body.strip()) > 50:
+                return {"title": title, "text": body, "url": url, "ts": time.time(), "error": ""}
+    except Exception as exc:
+        return {"title": "", "text": "", "url": url, "ts": time.time(), "error": str(exc)}
+    return {"title": "", "text": "", "url": url, "ts": time.time(), "error": "Reader extraction failed"}
+
+
+def format_article_html(text):
+    """Format article text for phone display, converting markdown links to HTML."""
+    safe_text = h(text)
+    converted = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'<a href="\2" target="_blank">\1</a>', safe_text)
+    return converted.replace("\n", "<br>")
+
+
 def fetch_article(url):
-    """Fetch and extract article content using readability."""
+    """Fetch and extract article content using readability, falling back to Jina reader on proxy blocks."""
     if not url or "news.google.com" in url or "google.com" in url:
         return {"title": "", "text": "", "url": url, "ts": time.time(), "error": "Google News link could not be decoded"}
 
@@ -310,41 +342,46 @@ def fetch_article(url):
     if cached and now - cached["ts"] < ARTICLE_CACHE_TTL:
         return cached
 
-    if not READABILITY_AVAILABLE:
-        return {"title": "", "text": "", "url": url, "ts": now, "error": "Reader unavailable (install readability-lxml)"}
+    last_err = ""
+    # 1. Try direct readability extraction
+    if READABILITY_AVAILABLE:
+        try:
+            headers = {
+                "User-Agent": USER_AGENT,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+            }
+            resp = requests.get(url, headers=headers, timeout=15)
+            resp.raise_for_status()
+            doc = ReadabilityDocument(resp.text)
+            title = doc.title()
+            text = article_to_text(doc.summary())
 
-    try:
-        headers = {
-            "User-Agent": USER_AGENT,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-        }
-        resp = requests.get(url, headers=headers, timeout=15)
-        resp.raise_for_status()
-        doc = ReadabilityDocument(resp.text)
-        title = doc.title()
-        text = article_to_text(doc.summary())
+            if text and len(text.strip()) > 100:
+                if len(text) > ARTICLE_MAX_LENGTH:
+                    text = text[:ARTICLE_MAX_LENGTH] + "\n\n[article trimmed]"
 
-        if len(text) > ARTICLE_MAX_LENGTH:
-            text = text[:ARTICLE_MAX_LENGTH] + "\n\n[article trimmed]"
+                result = {"title": title, "text": text, "url": url, "ts": now, "error": ""}
+                _article_cache[url] = result
+                if len(_article_cache) > ARTICLE_MAX_CACHE:
+                    oldest = min(_article_cache, key=lambda k: _article_cache[k]["ts"])
+                    del _article_cache[oldest]
+                return result
+        except Exception as exc:
+            last_err = str(exc)
 
-        result = {"title": title, "text": text, "url": url, "ts": now, "error": ""}
-        _article_cache[url] = result
+    # 2. If direct fetch fails (e.g. PythonAnywhere proxy blocks domain / 403), use allowlisted Jina reader
+    jina_res = fetch_via_jina(url)
+    if jina_res and not jina_res.get("error") and len(jina_res.get("text", "").strip()) > 50:
+        _article_cache[url] = jina_res
         if len(_article_cache) > ARTICLE_MAX_CACHE:
             oldest = min(_article_cache, key=lambda k: _article_cache[k]["ts"])
             del _article_cache[oldest]
-        return result
-    except requests.exceptions.ProxyError:
-        return {"title": "", "text": "", "url": url, "ts": now, "error": "Blocked by host proxy (domain not whitelisted on free tier)"}
-    except requests.Timeout:
-        return {"title": "", "text": "", "url": url, "ts": now, "error": "Article fetch timed out"}
-    except requests.HTTPError as exc:
-        return {"title": "", "text": "", "url": url, "ts": now, "error": f"HTTP {exc.response.status_code}"}
-    except Exception as exc:
-        err_str = str(exc)
-        if "403" in err_str or "Tunnel" in err_str or "ProxyError" in err_str:
-            err_str = "Blocked by host proxy (domain not whitelisted on free tier)"
-        return {"title": "", "text": "", "url": url, "ts": now, "error": err_str}
+        return jina_res
+
+    # 3. Return error if both fail
+    err_str = jina_res.get("error") or last_err or "Article fetch failed"
+    return {"title": "", "text": "", "url": url, "ts": now, "error": err_str}
 
 
 NEWS_CSS = """
@@ -451,7 +488,7 @@ def register_news_routes(flask_app, prefix="/news"):
 
         if not article.get("error") and article.get("text", "").strip() and "google.com" not in article_url:
             art_title = h(article.get("title") or item["title"])
-            body_text = h(article["text"]).replace("\n", "<br>")
+            body_text = format_article_html(article["text"])
             body = f"""
 <div class="small">{meta}</div>
 <h3>{art_title}</h3>
