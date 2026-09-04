@@ -46,6 +46,7 @@ def app_drawer(apps, slots=9):
     ui_cfg = get_ui_config()
     icon_size = ui_cfg.get("icon_size", 44)
     cell_height = ui_cfg.get("cell_height", 82)
+    total_slots = max(slots or 9, ((len(apps) + 2) // 3) * 3)
 
     drawer_css = f"""
 .drawer{{width:100%;overflow:hidden;}}
@@ -58,7 +59,7 @@ def app_drawer(apps, slots=9):
 .clear{{clear:both;height:0;overflow:hidden;}}
 """
     cells = []
-    for app in apps[:slots]:
+    for app in apps[:total_slots]:
         name = h(app.get("label", app.get("name")))
         url = h(app.get("url", "#"))
         icon = h(app.get("icon", "blank.png"))
@@ -72,7 +73,7 @@ def app_drawer(apps, slots=9):
                 f"<div class='appcell'><a href='{url}'><img src='/icons/{icon}' alt=''><span class='label'>{name}</span></a></div>"
             )
 
-    while len(cells) < slots:
+    while len(cells) < total_slots:
         cells.append("<div class='cell-empty'>&nbsp;</div>")
 
     return "<div class='drawer'>" + "".join(cells) + "<div class='clear'></div></div>", drawer_css
