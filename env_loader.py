@@ -44,8 +44,9 @@ def load_env(path=None, override=False):
             if not parsed:
                 continue
             key, value = parsed
-            if override or key not in os.environ:
-                os.environ[key] = value
+            if value != "":
+                if override or key not in os.environ:
+                    os.environ[key] = value
 
     _LOADED_PATHS.add(env_path)
     return True

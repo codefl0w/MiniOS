@@ -2,7 +2,7 @@
 set -e
 
 echo "======================================"
-echo "      MiniOS Installation Script      "
+echo "    MiniOS Installer & Auto-Updater   "
 echo "======================================"
 
 # 1. Detect Python executable
@@ -21,46 +21,54 @@ fi
 
 echo "[+] Using Python: $($PYTHON --version 2>&1) ($PYTHON)"
 
-# 2. Handle directory (clone if script was run outside repository via curl)
+# 2. Handle directory, install, or update
 REPO_URL="https://github.com/codefl0w/MiniOS.git"
+
 if [ ! -f "main.py" ]; then
     if [ -d "MiniOS" ]; then
-        echo "[+] Entering existing MiniOS directory..."
+        echo "[+] Found existing MiniOS directory. Entering..."
         cd MiniOS
     else
-        echo "[+] Cloning MiniOS repository..."
+        echo "[+] Cloning MiniOS from $REPO_URL..."
         git clone "$REPO_URL" MiniOS
         cd MiniOS
     fi
 fi
 
+# If inside a git repository, pull latest updates (force-update without touching databases/.env)
+if [ -d ".git" ]; then
+    echo "[+] Updating MiniOS source from Git (preserving databases and settings)..."
+    git fetch origin main --quiet || true
+    git reset --hard origin/main --quiet || true
+    echo "[+] Code updated to latest commit."
+fi
+
 CURRENT_DIR="$(pwd)"
 echo "[+] Working directory: $CURRENT_DIR"
 
-# 3. Create virtual environment
+# 3. Create or update virtual environment
 VENV_DIR="$CURRENT_DIR/.venv"
 if [ ! -d "$VENV_DIR" ]; then
     echo "[+] Creating virtual environment in .venv..."
     $PYTHON -m venv "$VENV_DIR"
 else
-    echo "[+] Existing virtual environment found in .venv."
+    echo "[+] Using virtual environment in .venv."
 fi
 
-# 4. Activate virtual environment
+# Activate virtual environment
 # shellcheck source=/dev/null
 source "$VENV_DIR/bin/activate"
 
-# 5. Install dependencies
-echo "[+] Installing dependencies from requirements.txt..."
+# 4. Install / upgrade dependencies
+echo "[+] Installing/updating dependencies from requirements.txt..."
 pip install --upgrade pip --quiet
 pip install -r requirements.txt --quiet
-echo "[+] Dependencies installed successfully."
+echo "[+] Dependencies up to date."
 
-# 6. Configure .env
+# 5. Configure .env if missing
 if [ ! -f ".env" ]; then
     echo "[+] Creating .env from .env.example..."
     cp .env.example .env
-    # Generate secure random secret for session cookies
     SECRET=$(python -c "import secrets; print(secrets.token_hex(24))" 2>/dev/null || openssl rand -hex 24 2>/dev/null || echo "minios_secret_$(date +%s)")
     if [ -n "$SECRET" ]; then
         if sed --version >/dev/null 2>&1; then
@@ -71,45 +79,58 @@ if [ ! -f ".env" ]; then
     fi
     echo "[+] Generated random MINIGRAM_SECRET in .env"
 else
-    echo "[+] Existing .env file found. Preserving current configuration."
+    echo "[+] Existing .env file preserved."
 fi
 
-echo "======================================"
-echo "    MiniOS Installed Successfully!    "
-echo "======================================"
-
-# 7. Check if running on PythonAnywhere
+# 6. Automate PythonAnywhere WSGI configuration
 IS_PA=false
-if [ -n "$PYTHONANYWHERE_SITE" ] || [ -n "$PYTHONANYWHERE_DOMAIN" ] || echo "$HOSTNAME" | grep -qi "pythonanywhere"; then
+WSGI_FILES=$(ls /var/www/*_wsgi.py 2>/dev/null || true)
+
+if [ -n "$PYTHONANYWHERE_SITE" ] || [ -n "$PYTHONANYWHERE_DOMAIN" ] || [ -n "$WSGI_FILES" ] || echo "$HOSTNAME" | grep -qi "pythonanywhere"; then
     IS_PA=true
 fi
+
+if [ "$IS_PA" = true ] && [ -n "$WSGI_FILES" ]; then
+    echo "[+] Detected PythonAnywhere environment."
+    for wsgi_file in $WSGI_FILES; do
+        echo "[+] Writing automated WSGI configuration to $wsgi_file..."
+        cat <<EOF > "$wsgi_file"
+import os
+import sys
+
+path = '$CURRENT_DIR'
+if path not in sys.path:
+    sys.path.insert(0, path)
+
+os.chdir(path)
+
+from main import application
+EOF
+        # Touch WSGI file to trigger uWSGI application reload on PythonAnywhere
+        touch "$wsgi_file"
+        echo "[+] Reload triggered on $wsgi_file."
+    done
+fi
+
+echo "======================================"
+echo "    MiniOS Ready & Up To Date!        "
+echo "======================================"
 
 if [ "$IS_PA" = true ]; then
     PA_USER=$(whoami)
     echo ""
-    echo "--- PythonAnywhere Setup Instructions ---"
-    echo "1. Go to the 'Web' tab in your PythonAnywhere dashboard."
-    echo "2. If you haven't created a web app yet, click 'Add a new web app' -> Manual configuration -> Python 3.10 (or 3.11)."
-    echo "3. In the 'Virtualenv' section, set path to:"
-    echo "     /home/$PA_USER/MiniOS/.venv"
-    echo "4. In the 'Code' section, set 'Source code' and 'Working directory' to:"
-    echo "     /home/$PA_USER/MiniOS"
-    echo "5. Click on the WSGI configuration file link and replace contents with:"
-    echo "---------------------------------------------------------"
-    echo "import sys"
-    echo "path = '/home/$PA_USER/MiniOS'"
-    echo "if path not in sys.path:"
-    echo "    sys.path.append(path)"
-    echo "from main import application"
-    echo "---------------------------------------------------------"
-    echo "6. Click the green 'Reload <your-username>.pythonanywhere.com' button at the top."
+    echo "--- PythonAnywhere Check ---"
+    echo "WSGI file automatically configured and reloaded!"
+    echo "Make sure your Web tab has:"
+    echo "  - Virtualenv: $CURRENT_DIR/.venv"
+    echo "  - Source code: $CURRENT_DIR"
     echo ""
 else
     echo ""
-    echo "To start MiniOS locally:"
+    echo "To run MiniOS:"
     echo "  source .venv/bin/activate"
     echo "  python main.py"
     echo ""
-    echo "MiniOS will run at: http://127.0.0.1:2000/"
+    echo "URL: http://127.0.0.1:2000/"
     echo ""
 fi

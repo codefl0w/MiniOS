@@ -18,14 +18,14 @@ load_env()
 from settings import app_settings
 from ui import h, phone_page
 
-IMAP_HOST = os.environ.get("MAIL_IMAP_HOST", "imap.gmail.com")
-IMAP_PORT = int(os.environ.get("MAIL_IMAP_PORT", "993"))
-SMTP_HOST = os.environ.get("MAIL_SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.environ.get("MAIL_SMTP_PORT", "465"))
-MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")
-MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
-MAIL_FROM = os.environ.get("MAIL_FROM", MAIL_USERNAME)
-MAIL_BODY_LIMIT = int(os.environ.get("MAIL_BODY_LIMIT", "12000"))
+IMAP_HOST = (os.environ.get("MAIL_IMAP_HOST") or "").strip() or "imap.gmail.com"
+IMAP_PORT = int((os.environ.get("MAIL_IMAP_PORT") or "").strip() or "993")
+SMTP_HOST = (os.environ.get("MAIL_SMTP_HOST") or "").strip() or "smtp.gmail.com"
+SMTP_PORT = int((os.environ.get("MAIL_SMTP_PORT") or "").strip() or "465")
+MAIL_USERNAME = (os.environ.get("MAIL_USERNAME") or "").strip()
+MAIL_PASSWORD = (os.environ.get("MAIL_PASSWORD") or "").strip()
+MAIL_FROM = (os.environ.get("MAIL_FROM") or "").strip() or MAIL_USERNAME
+MAIL_BODY_LIMIT = int((os.environ.get("MAIL_BODY_LIMIT") or "").strip() or "12000")
 
 _inbox_cache = {"ts": 0, "rows": [], "error": ""}
 _message_cache = {}

@@ -17,18 +17,18 @@ from settings import app_settings, default_app_setting
 from ui import h, phone_page
 
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-ME_ID = int(os.environ.get("ME_ID", "0"))
-PORT = int(os.environ.get("PORT", "2000"))
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
+ME_ID = int((os.environ.get("ME_ID") or "").strip() or "0")
+PORT = int((os.environ.get("PORT") or "").strip() or "2000")
 
 BASE_DIR = os.path.dirname(__file__)
-DB_PATH = os.environ.get("DB_PATH", os.path.join(BASE_DIR, "messages.db"))
-UPLOAD_DIR = os.path.abspath(os.environ.get("UPLOAD_DIR", os.path.join(BASE_DIR, "uploads")))
+DB_PATH = os.environ.get("DB_PATH") or os.path.join(BASE_DIR, "messages.db")
+UPLOAD_DIR = os.path.abspath(os.environ.get("UPLOAD_DIR") or os.path.join(BASE_DIR, "uploads"))
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-RESIZE_IMAGES = os.environ.get("RESIZE_IMAGES", "1") == "1"
-MAX_IMAGE_WIDTH = int(os.environ.get("MAX_IMAGE_WIDTH", "800"))
-MAX_DOWNLOAD_BYTES = int(os.environ.get("MAX_DOWNLOAD_BYTES", str(8 * 1024 * 1024)))
+RESIZE_IMAGES = (os.environ.get("RESIZE_IMAGES") or "1").strip() == "1"
+MAX_IMAGE_WIDTH = int((os.environ.get("MAX_IMAGE_WIDTH") or "").strip() or "800")
+MAX_DOWNLOAD_BYTES = int((os.environ.get("MAX_DOWNLOAD_BYTES") or "").strip() or str(8 * 1024 * 1024))
 MAX_SHOW = 10
 
 minigram_bp = Blueprint("minigram", __name__)

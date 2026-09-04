@@ -16,7 +16,7 @@ from settings import WEATHER_TEMPERATURE_UNITS, app_settings, default_app_settin
 from ui import h, phone_page
 
 # ---- Configuration ----
-CACHE_TTL = int(os.environ.get("WEATHER_CACHE_TTL", "900"))
+CACHE_TTL = int((os.environ.get("WEATHER_CACHE_TTL") or "").strip() or "900")
 DATA_FILE = os.path.join(os.path.dirname(__file__), "weather.json")
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 

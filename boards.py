@@ -16,7 +16,7 @@ load_env()
 from settings import BOARD_SORTS, app_settings, default_app_setting
 from ui import h, phone_page
 
-CACHE_TTL = int(os.environ.get("BOARDS_CACHE_TTL", "600"))
+CACHE_TTL = int((os.environ.get("BOARDS_CACHE_TTL") or "").strip() or "600")
 USER_AGENT = os.environ.get("BOARDS_USER_AGENT", "MiniOS/0.1 personal feature-phone RSS reader")
 BASE_URL = "https://www.reddit.com/r/{sub}/{sort}/.rss"
 NS = {"a": "http://www.w3.org/2005/Atom", "m": "http://search.yahoo.com/mrss/"}
