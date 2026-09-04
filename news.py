@@ -7,7 +7,7 @@ from datetime import datetime
 from email.utils import parsedate_to_datetime
 from html import unescape
 from html.parser import HTMLParser
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlparse
 
 import requests
 from env_loader import load_env
@@ -229,22 +229,33 @@ def cache_age(ts):
 
 
 def decode_gnews_token(source_url):
-    """Direct decoder for Google News RSS articles using browser headers."""
+    """Direct decoder for Google News RSS articles using browser headers and consent cookies."""
     try:
         base64_str = source_url.split("/")[-1].split("?")[0]
-        headers = {"User-Agent": USER_AGENT}
-        r = requests.get(f"https://news.google.com/rss/articles/{base64_str}", headers=headers, timeout=10)
-        if r.status_code != 200:
-            return None
-        sg = re.search(r'data-n-a-sg="([^"]+)"', r.text)
-        ts = re.search(r'data-n-a-ts="([^"]+)"', r.text)
+        cookies = {
+            "CONSENT": "YES+cb.20210720-07-p0.en+FX+410",
+            "SOCS": "CAESEwgDEgk2OTg2OTM0MjQaAmVuIAEaBgiA_L20Bg",
+        }
+        headers = {
+            "User-Agent": USER_AGENT,
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        sg, ts = None, None
+        for endpoint in [f"https://news.google.com/articles/{base64_str}", f"https://news.google.com/rss/articles/{base64_str}"]:
+            r = requests.get(endpoint, headers=headers, cookies=cookies, timeout=10)
+            if r.status_code == 200:
+                sg_match = re.search(r'data-n-a-sg="([^"]+)"', r.text)
+                ts_match = re.search(r'data-n-a-ts="([^"]+)"', r.text)
+                if sg_match and ts_match:
+                    sg, ts = sg_match.group(1), ts_match.group(1)
+                    break
         if not (sg and ts):
             return None
 
         batch_url = "https://news.google.com/_/DotsSplashUi/data/batchexecute"
         payload = [
             "Fbv4je",
-            f'["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"{base64_str}",{ts.group(1)},"{sg.group(1)}"]',
+            f'["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"{base64_str}",{ts},"{sg}"]',
         ]
         post_headers = {
             "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
@@ -253,6 +264,7 @@ def decode_gnews_token(source_url):
         resp = requests.post(
             batch_url,
             headers=post_headers,
+            cookies=cookies,
             data=f"f.req={quote(json.dumps([[payload]]))}",
             timeout=10,
         )
@@ -264,15 +276,33 @@ def decode_gnews_token(source_url):
     return None
 
 
-def resolve_news_url(url):
-    """Resolve Google News URL to actual article URL."""
+def resolve_via_search(title, source_url=""):
+    """Find real destination article URL via DuckDuckGo search (whitelisted on PythonAnywhere)."""
+    try:
+        domain = urlparse(source_url).netloc.replace("www.", "") if source_url else ""
+        query = f'"{title}" site:{domain}' if domain else f'"{title}"'
+        from duckduckgo import search_duckduckgo
+        res = search_duckduckgo(query)
+        if res.get("items"):
+            first_url = res["items"][0]["url"]
+            if "google.com" not in first_url:
+                return first_url
+    except Exception:
+        pass
+    return None
+
+
+def resolve_news_url(url, title="", source_url=""):
+    """Resolve Google News URL to actual article URL with multi-layer fallback."""
     if not url or "news.google.com" not in url:
         return url
 
+    # 1. Direct browser-header-based decode with consent cookies
     decoded = decode_gnews_token(url)
     if decoded and "google.com" not in decoded:
         return decoded
 
+    # 2. googlenewsdecoder package fallback
     if GNEWS_DECODER_AVAILABLE:
         try:
             result = _gnews_decode(url)
@@ -283,6 +313,13 @@ def resolve_news_url(url):
         except Exception:
             pass
 
+    # 3. DuckDuckGo search fallback (allowlisted on PA, finds exact article URL by title)
+    if title:
+        search_decoded = resolve_via_search(title, source_url)
+        if search_decoded:
+            return search_decoded
+
+    # 4. HTTP redirect follow fallback
     try:
         resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=15, allow_redirects=True)
         if "google.com" not in resp.url:
@@ -478,7 +515,7 @@ def register_news_routes(flask_app, prefix="/news"):
         item = feed["items"][index]
         back = feed_link(base, params)
 
-        article_url = resolve_news_url(item["link"])
+        article_url = resolve_news_url(item["link"], title=item.get("title", ""), source_url=item.get("source_url", ""))
         article = fetch_article(article_url)
 
         meta = h(item.get("source") or "Google News")
