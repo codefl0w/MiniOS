@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import time
@@ -30,7 +31,10 @@ except ImportError:
     GNEWS_DECODER_AVAILABLE = False
 
 BASE_URL = "https://news.google.com/rss"
-USER_AGENT = os.environ.get("NEWS_USER_AGENT", "MiniOS/0.1 personal Google News RSS reader")
+USER_AGENT = os.environ.get(
+    "NEWS_USER_AGENT",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+)
 NEWS_CACHE_TTL = int((os.environ.get("NEWS_CACHE_TTL") or "").strip() or "900")
 _cache = {}
 _article_cache = {}
@@ -196,7 +200,12 @@ def fetch_news(params, force=False):
 
     url = build_url(params)
     try:
-        resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=15)
+        headers = {
+            "User-Agent": USER_AGENT,
+            "Accept": "application/rss+xml, application/xml, text/xml, */*",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        resp = requests.get(url, headers=headers, timeout=15)
         resp.raise_for_status()
         data = parse_feed(resp.text)
         data.update({"url": url, "ts": now, "error": "", "params": params})
@@ -219,23 +228,68 @@ def cache_age(ts):
     return f"{age // 60}m {age % 60}s"
 
 
+def decode_gnews_token(source_url):
+    """Direct decoder for Google News RSS articles using browser headers."""
+    try:
+        base64_str = source_url.split("/")[-1].split("?")[0]
+        headers = {"User-Agent": USER_AGENT}
+        r = requests.get(f"https://news.google.com/rss/articles/{base64_str}", headers=headers, timeout=10)
+        if r.status_code != 200:
+            return None
+        sg = re.search(r'data-n-a-sg="([^"]+)"', r.text)
+        ts = re.search(r'data-n-a-ts="([^"]+)"', r.text)
+        if not (sg and ts):
+            return None
+
+        batch_url = "https://news.google.com/_/DotsSplashUi/data/batchexecute"
+        payload = [
+            "Fbv4je",
+            f'["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"{base64_str}",{ts.group(1)},"{sg.group(1)}"]',
+        ]
+        post_headers = {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "User-Agent": USER_AGENT,
+        }
+        resp = requests.post(
+            batch_url,
+            headers=post_headers,
+            data=f"f.req={quote(json.dumps([[payload]]))}",
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            parsed = json.loads(resp.text.split("\n\n")[1])[:-2]
+            return json.loads(parsed[0][2])[1]
+    except Exception:
+        pass
+    return None
+
+
 def resolve_news_url(url):
     """Resolve Google News URL to actual article URL."""
     if not url or "news.google.com" not in url:
         return url
+
+    decoded = decode_gnews_token(url)
+    if decoded and "google.com" not in decoded:
+        return decoded
+
     if GNEWS_DECODER_AVAILABLE:
         try:
             result = _gnews_decode(url)
             if result.get("status") and result.get("decoded_url"):
-                return result["decoded_url"]
+                decoded_url = result["decoded_url"]
+                if "google.com" not in decoded_url:
+                    return decoded_url
         except Exception:
             pass
+
     try:
         resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=15, allow_redirects=True)
         if "google.com" not in resp.url:
             return resp.url
     except Exception:
         pass
+
     return url
 
 
@@ -248,6 +302,9 @@ def article_to_text(html):
 
 def fetch_article(url):
     """Fetch and extract article content using readability."""
+    if not url or "news.google.com" in url or "google.com" in url:
+        return {"title": "", "text": "", "url": url, "ts": time.time(), "error": "Google News link could not be decoded"}
+
     now = time.time()
     cached = _article_cache.get(url)
     if cached and now - cached["ts"] < ARTICLE_CACHE_TTL:
@@ -257,7 +314,12 @@ def fetch_article(url):
         return {"title": "", "text": "", "url": url, "ts": now, "error": "Reader unavailable (install readability-lxml)"}
 
     try:
-        resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=20)
+        headers = {
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        resp = requests.get(url, headers=headers, timeout=15)
         resp.raise_for_status()
         doc = ReadabilityDocument(resp.text)
         title = doc.title()
@@ -272,12 +334,17 @@ def fetch_article(url):
             oldest = min(_article_cache, key=lambda k: _article_cache[k]["ts"])
             del _article_cache[oldest]
         return result
+    except requests.exceptions.ProxyError:
+        return {"title": "", "text": "", "url": url, "ts": now, "error": "Blocked by host proxy (domain not whitelisted on free tier)"}
     except requests.Timeout:
         return {"title": "", "text": "", "url": url, "ts": now, "error": "Article fetch timed out"}
     except requests.HTTPError as exc:
         return {"title": "", "text": "", "url": url, "ts": now, "error": f"HTTP {exc.response.status_code}"}
     except Exception as exc:
-        return {"title": "", "text": "", "url": url, "ts": now, "error": str(exc)}
+        err_str = str(exc)
+        if "403" in err_str or "Tunnel" in err_str or "ProxyError" in err_str:
+            err_str = "Blocked by host proxy (domain not whitelisted on free tier)"
+        return {"title": "", "text": "", "url": url, "ts": now, "error": err_str}
 
 
 NEWS_CSS = """
@@ -377,16 +444,36 @@ def register_news_routes(flask_app, prefix="/news"):
         article_url = resolve_news_url(item["link"])
         article = fetch_article(article_url)
 
-        if article["error"]:
+        meta = h(item.get("source") or "Google News")
+        if item.get("date"):
+            meta += " | " + h(item["date"])
+        title = h(item.get("title") or "Article")
+
+        if not article.get("error") and article.get("text", "").strip() and "google.com" not in article_url:
+            art_title = h(article.get("title") or item["title"])
+            body_text = h(article["text"]).replace("\n", "<br>")
             body = f"""
-<h3>{h(item["title"])}</h3>
-<div class="err">Could not load article: {h(article["error"])}</div>
+<div class="small">{meta}</div>
+<h3>{art_title}</h3>
+<div class="body">{body_text}</div>
+<div class="small"><a href="{h(article_url)}" target="_blank">[Source Website]</a></div>
 """
         else:
+            summary = h(item.get("summary") or "").replace("\n", "<br>")
+            err = article.get("error") or "External site unavailable"
+            orig_link = h(article_url if "google.com" not in article_url else item["link"])
             body = f"""
-<div class="small">{h(item["source"] or "Google News")} | {h(item["date"])}</div>
-<h3>{h(article["title"] or item["title"])}</h3>
-<div class="body">{h(article["text"]).replace(chr(10), "<br>")}</div>
-<div class="small"><a href="{h(article_url)}">Source</a></div>
+<div class="small">{meta}</div>
+<h3>{title}</h3>
+"""
+            if summary:
+                body += f"""
+<div class="body">{summary}</div>
+<div class="small muted">Full article unavailable on host network ({h(err)}). Summary displayed above.</div>
+"""
+            else:
+                body += f"<div class='err'>{h(err)}</div>"
+            body += f"""
+<p><a href="{orig_link}" target="_blank">Open original article &raquo;</a></p>
 """
         return phone_page("Reader", body, nav=[("Apps", "/"), ("News", base), ("Back", back)], extra_css=NEWS_CSS)
