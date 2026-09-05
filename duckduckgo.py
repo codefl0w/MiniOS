@@ -15,17 +15,11 @@ load_env()
 from settings import app_settings, default_app_setting
 from ui import h, phone_page
 
-try:
-    from readability import Document as ReadabilityDocument
-    READABILITY_AVAILABLE = True
-except ImportError:
-    READABILITY_AVAILABLE = False
+from reader import fetch_article, format_article_html
 
 BASE_URL = "https://html.duckduckgo.com/html/"
 USER_AGENT = os.environ.get("DUCKDUCKGO_USER_AGENT") or os.environ.get("SEARCH_USER_AGENT") or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 DUCKDUCKGO_CACHE_TTL = int((os.environ.get("DUCKDUCKGO_CACHE_TTL") or os.environ.get("SEARCH_CACHE_TTL") or "").strip() or "600")
-ARTICLE_CACHE_TTL = int((os.environ.get("DUCKDUCKGO_ARTICLE_CACHE_TTL") or os.environ.get("SEARCH_ARTICLE_CACHE_TTL") or "").strip() or "1800")
-ARTICLE_MAX_LENGTH = 15000
 
 REGIONS = [
     ("", "All Regions"),
@@ -103,37 +97,7 @@ DATE_FILTERS = [
 ]
 
 _duckduckgo_cache = {}
-_article_cache = {}
 
-
-class ArticleParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.parts = []
-        self._skip = False
-
-    def handle_starttag(self, tag, attrs):
-        if tag in ("script", "style", "noscript"):
-            self._skip = True
-        elif tag in ("br", "p", "div", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote"):
-            self.parts.append("\n")
-
-    def handle_endtag(self, tag):
-        if tag in ("script", "style", "noscript"):
-            self._skip = False
-        elif tag in ("p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote"):
-            self.parts.append("\n")
-
-    def handle_data(self, data):
-        if not self._skip and data:
-            self.parts.append(data)
-
-    def text(self):
-        text = "".join(self.parts)
-        text = unescape(text)
-        text = re.sub(r"[ \t\r\f\v]+", " ", text)
-        text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
-        return text.strip()
 
 
 def unpack_ddg_url(raw_url):
@@ -298,39 +262,7 @@ def search_duckduckgo(query, kl="", df="", payload_override=None, is_more=False)
         return {"query": query, "kl": kl, "df": df, "items": [], "next_page": None, "spelling": "", "ts": now, "error": str(exc)}
 
 
-def fetch_readable_article(url):
-    now = time.time()
-    cached = _article_cache.get(url)
-    if cached and now - cached["ts"] < ARTICLE_CACHE_TTL:
-        return cached
-
-    if not READABILITY_AVAILABLE:
-        return {"title": "", "text": "", "url": url, "ts": now, "error": "Reader unavailable (readability-lxml missing)."}
-
-    try:
-        resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=20)
-        resp.raise_for_status()
-        doc = ReadabilityDocument(resp.text)
-        title = doc.title()
-        parser = ArticleParser()
-        parser.feed(doc.summary() or "")
-        text = parser.text()
-
-        if len(text) > ARTICLE_MAX_LENGTH:
-            text = text[:ARTICLE_MAX_LENGTH] + "\n\n[article trimmed]"
-
-        result = {"title": title, "text": text, "url": url, "ts": now, "error": ""}
-        _article_cache[url] = result
-        if len(_article_cache) > 50:
-            oldest = min(_article_cache, key=lambda k: _article_cache[k]["ts"])
-            del _article_cache[oldest]
-        return result
-    except requests.Timeout:
-        return {"title": "", "text": "", "url": url, "ts": now, "error": "Fetch timed out."}
-    except requests.HTTPError as exc:
-        return {"title": "", "text": "", "url": url, "ts": now, "error": f"HTTP {exc.response.status_code}"}
-    except Exception as exc:
-        return {"title": "", "text": "", "url": url, "ts": now, "error": str(exc)}
+fetch_readable_article = fetch_article
 
 
 DUCKDUCKGO_CSS = """
@@ -488,19 +420,19 @@ def register_duckduckgo_routes(flask_app, prefix="/duckduckgo"):
         if not url:
             return redirect(base)
 
-        article = fetch_readable_article(url)
+        article = fetch_article(url)
 
         if article.get("error"):
             body = f"<div class='err'>{h(article['error'])}</div>"
-            body += f"<div class='orig'><a href='{h(url)}'>Open original link</a></div>"
+            body += f"<div class='orig'><a href='{h(url)}' target='_blank'>Open original link</a></div>"
             return phone_page("Reader", body, nav=nav_links, extra_css=DUCKDUCKGO_CSS)
 
         title = h(article.get("title") or "Article")
-        body_text = h(article.get("text", ""))
+        body_text = format_article_html(article.get("text", ""))
 
         body = f"""
         <div class='article-title'>{title}</div>
-        <div class='orig'><a href='{h(url)}'>[Open Original Website]</a></div>
+        <div class='orig'><a href='{h(url)}' target='_blank'>[Open Original Website]</a></div>
         <div class='article-body'>{body_text}</div>
         """
         return phone_page(title, body, nav=nav_links, extra_css=DUCKDUCKGO_CSS)
