@@ -198,7 +198,7 @@ def root():
         body += pop_html
         css += pop_css
 
-    return phone_page("MiniOS by fl0w", body, extra_css=css)
+    return phone_page("", body, extra_css=css)
 
 
 if __name__ == "__main__":

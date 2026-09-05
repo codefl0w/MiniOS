@@ -328,7 +328,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 </div>
 {contact_html}
 """
-        return phone_page("Minigram Settings", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+        return phone_page("Minigram Settings", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/weather", methods=["GET", "POST"])
     def settings_weather():
@@ -359,7 +359,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 {save_button()}
 </form>
 """
-        return phone_page("Weather Settings", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+        return phone_page("Weather Settings", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/finance", methods=["GET", "POST"])
     def settings_finance():
@@ -373,7 +373,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 {save_button()}
 </form>
 """
-        return phone_page("Finance Settings", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+        return phone_page("Finance Settings", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/boards", methods=["GET", "POST"])
     def settings_boards():
@@ -397,7 +397,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 {save_button()}
 </form>
 """
-        return phone_page("Boards Settings", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+        return phone_page("Boards Settings", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/news", methods=["GET", "POST"])
     def settings_news():
@@ -433,7 +433,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 {save_button()}
 </form>
 """
-        return phone_page("News Settings", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+        return phone_page("News Settings", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/mail", methods=["GET", "POST"])
     def settings_mail():
@@ -455,7 +455,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 </form>
 <div class="small">Gmail address and app password stay in .env only.</div>
 """
-        return phone_page("Gmail Settings", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+        return phone_page("Gmail Settings", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/apps", methods=["GET", "POST"])
     def settings_apps():
@@ -485,7 +485,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 </div>
 </form>
 """
-        return phone_page("App Manager", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+        return phone_page("App Manager", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/ui", methods=["GET", "POST"])
     def settings_ui():
@@ -548,7 +548,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 <input type="submit" value="Reset to Defaults" style="background: #ff8b8b;">
 </form>
 """
-        return phone_page("Appearance", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+        return phone_page("Appearance", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/duckduckgo", methods=["GET", "POST"])
     @flask_app.route(base + "/search", methods=["GET", "POST"])
@@ -579,7 +579,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 {save_button()}
 </form>
 """
-        return phone_page("DuckDuckGo Settings", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+        return phone_page("DuckDuckGo Settings", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/about")
     def settings_about():
@@ -589,4 +589,4 @@ def register_settings_routes(flask_app, prefix="/settings"):
 <div class="row"><strong>Platform:</strong><span class="small">Flask</span></div>
 <div class="row"><strong>Target:</strong><span class="small">Opera Mini / Dorado</span></div>
 """
-        return phone_page("About", body, nav=[("Settings", base)], extra_css=SETTINGS_CSS)
+        return phone_page("About", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)

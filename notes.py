@@ -158,7 +158,7 @@ def register_notes_routes(flask_app, prefix="/notes"):
     def notes_detail(note_id):
         row = get_note(note_id)
         if not row:
-            return phone_page("Not Found", "<p class='muted'>Note missing</p>", nav=[("Notes", base)]), 404
+            return phone_page("Not Found", "<p class='muted'>Note missing</p>", nav=[("Apps", "/"), ("Notes", base)]), 404
         if request.method == "POST":
             body = request.form.get("body", "").strip()
             if body:

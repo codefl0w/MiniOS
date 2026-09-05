@@ -381,7 +381,7 @@ def register_news_routes(flask_app, prefix="/news"):
 <p><a href="{h(read_url)}">Read full article</a></p>
 <p><a href="{h(back)}">Back</a></p>
 """
-        return phone_page("News", body, nav=[("Apps", "/"), ("News", base)], extra_css=NEWS_CSS)
+        return phone_page("News", body, nav=[("Apps", "/"), ("News", base), ("Back", back)], extra_css=NEWS_CSS)
 
     @flask_app.route(base + "/read/<int:index>")
     def news_read(index):

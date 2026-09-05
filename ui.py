@@ -29,7 +29,10 @@ def phone_page(title, body, nav=None, extra_css=""):
     
     nav_html = ""
     if nav:
-        links = [f"<a href='{h(url)}'>{h(label)}</a>" for label, url in nav]
+        nav_links = list(nav)
+        if nav_links and nav_links[0][1] != "/" and nav_links[0][0] != "Apps":
+            nav_links.insert(0, ("Apps", "/"))
+        links = [f"<a href='{h(url)}'>{h(label)}</a>" for label, url in nav_links]
         nav_html = f"<div class='nav'>{' | '.join(links)}</div>"
 
     return f"""<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>

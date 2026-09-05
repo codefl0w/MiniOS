@@ -403,7 +403,7 @@ def register_duckduckgo_routes(flask_app, prefix="/duckduckgo"):
             more_url = f"{base}?{urllib.parse.urlencode(more_params)}"
             body += f"<div class='nav-box'><a href='{h(more_url)}'>Show more</a></div>"
 
-        return phone_page(f"DuckDuckGo: {query}", body, nav=[("Apps", "/"), ("New Search", base)], extra_css=DUCKDUCKGO_CSS)
+        return phone_page(f"DuckDuckGo: {query}", body, nav=[("Apps", "/"), ("DuckDuckGo", base)], extra_css=DUCKDUCKGO_CSS)
 
     @flask_app.route(base + "/read", methods=["GET"])
     def duckduckgo_read():
@@ -412,16 +412,14 @@ def register_duckduckgo_routes(flask_app, prefix="/duckduckgo"):
         kl = request.args.get("kl", "")
         df = request.args.get("df", "")
 
-        nav_links = [("Apps", "/")]
+        nav_links = [("Apps", "/"), ("DuckDuckGo", base)]
         if back_q:
             back_params = {"q": back_q}
             if kl:
                 back_params["kl"] = kl
             if df:
                 back_params["df"] = df
-            nav_links.append(("Back to DuckDuckGo", f"{base}?{urllib.parse.urlencode(back_params)}"))
-        else:
-            nav_links.append(("DuckDuckGo", base))
+            nav_links.append(("Back", f"{base}?{urllib.parse.urlencode(back_params)}"))
 
         if not url:
             return redirect(base)

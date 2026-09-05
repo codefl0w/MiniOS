@@ -398,7 +398,7 @@ def contacts():
 def chat(telegram_id):
     contact = contact_for_id(telegram_id)
     if not contact:
-        return phone_page("Unknown Contact", "Add this Telegram ID in Settings first.", nav=[("Contacts", "/contacts")]), 404
+        return phone_page("Unknown Contact", "Add this Telegram ID in Settings first.", nav=[("Apps", "/"), ("Contacts", "/contacts")]), 404
 
     key = chat_key(telegram_id)
     mark_seen(key)
@@ -506,10 +506,10 @@ def set_webhook():
         r = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/setWebhook", json={"url": webhook_url}, timeout=10)
         result = r.json()
         if result.get("ok"):
-            return phone_page("Webhook", f"Webhook set.<br>{h(webhook_url)}", nav=[("Contacts", "/contacts")])
-        return phone_page("Webhook Error", f"<pre>{h(json.dumps(result, indent=2))}</pre>", nav=[("Contacts", "/contacts")])
+            return phone_page("Webhook", f"Webhook set.<br>{h(webhook_url)}", nav=[("Apps", "/"), ("Contacts", "/contacts")])
+        return phone_page("Webhook Error", f"<pre>{h(json.dumps(result, indent=2))}</pre>", nav=[("Apps", "/"), ("Contacts", "/contacts")])
     except Exception as exc:
-        return phone_page("Webhook Error", f"<pre>{h(exc)}</pre>", nav=[("Contacts", "/contacts")]), 500
+        return phone_page("Webhook Error", f"<pre>{h(exc)}</pre>", nav=[("Apps", "/"), ("Contacts", "/contacts")]), 500
 
 
 @minigram_bp.route("/webhook_info")
@@ -543,7 +543,7 @@ def debug():
             f"<span class='small'>{h(format_timestamp(row['timestamp'], full=True))} "
             f"seen={row['is_seen']} incoming={row['is_incoming']}</span></div>"
         )
-    return phone_page("Minigram Debug", body, nav=[("Contacts", "/contacts")], extra_css=MINIGRAM_CSS)
+    return phone_page("Minigram Debug", body, nav=[("Apps", "/"), ("Contacts", "/contacts")], extra_css=MINIGRAM_CSS)
 
 
 @minigram_bp.route("/test_images")
@@ -560,9 +560,9 @@ def test_images():
                 f"<span class='small'>{os.path.getsize(path)} bytes</span>"
                 f"<img src='/media/{h(image)}' alt='' style='max-width:100%;height:auto;border:0;'></div>"
             )
-        return phone_page("Image Test", body, nav=[("Contacts", "/contacts"), ("Debug", "/debug")], extra_css=MINIGRAM_CSS)
+        return phone_page("Image Test", body, nav=[("Apps", "/"), ("Contacts", "/contacts"), ("Debug", "/debug")], extra_css=MINIGRAM_CSS)
     except Exception as exc:
-        return phone_page("Image Error", f"<pre>{h(exc)}</pre>", nav=[("Contacts", "/contacts")]), 500
+        return phone_page("Image Error", f"<pre>{h(exc)}</pre>", nav=[("Apps", "/"), ("Contacts", "/contacts")]), 500
 
 
 if __name__ == "__main__":

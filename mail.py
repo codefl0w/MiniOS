@@ -328,7 +328,7 @@ def register_mail_routes(flask_app, prefix="/mail"):
 """
         if msg["attachments"]:
             body += f"<div class='small'>Attachments skipped: {h(', '.join(msg['attachments']))}</div>"
-        return phone_page("Mail", body, nav=[("Apps", "/"), ("Inbox", base)], extra_css=MAIL_CSS)
+        return phone_page("Mail", body, nav=[("Apps", "/"), ("Mail", base), ("Back", base)], extra_css=MAIL_CSS)
 
     @flask_app.route(base + "/compose", methods=["GET", "POST"])
     def mail_compose():
@@ -360,4 +360,4 @@ def register_mail_routes(flask_app, prefix="/mail"):
 <input type="submit" value="Send">
 </form>
 """
-        return phone_page("Compose", body, nav=[("Apps", "/"), ("Inbox", base)], extra_css=MAIL_CSS)
+        return phone_page("Compose", body, nav=[("Apps", "/"), ("Mail", base)], extra_css=MAIL_CSS)

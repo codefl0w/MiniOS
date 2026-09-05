@@ -155,7 +155,7 @@ input[type=submit]{width:24%;padding:6px;font-size:12px;background:#95e1ff;borde
 a.back{color:#9fdfff;text-decoration:none;}
 </style>
 <script>window.onload=function(){window.scrollTo(0,document.body.scrollHeight);};</script>
-</head><body><div class='topbar'><a class='back' href='/'>Apps</a> | <a class='back' href='/ai/clear'>Clear</a> <strong> - AI</strong></div>
+</head><body><div class='topbar nav'><a class='back' href='/'>Apps</a> | <a class='back' href='/ai/clear'>Clear</a> <strong> - AI</strong></div>
 <div class="wrap">
 """
     if not rows:

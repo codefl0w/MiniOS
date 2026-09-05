@@ -241,7 +241,7 @@ def register_boards_routes(flask_app, prefix="/boards"):
             return redirect(base)
         _feed, item = find_post(canonical, post_id)
         if not item:
-            return phone_page("Missing", "<p class='small'>Post not found in cached feed.</p>", nav=[("Boards", base)]), 404
+            return phone_page("Missing", "<p class='small'>Post not found in cached feed.</p>", nav=[("Apps", "/"), ("Boards", base)]), 404
 
         body = f"<h3>{h(item['title'])}</h3>"
         meta = item["published"]
@@ -259,4 +259,4 @@ def register_boards_routes(flask_app, prefix="/boards"):
             body += f"<p><a href='{h(item['outbound'])}'>Open link</a></p>"
         if item["link"]:
             body += f"<p><a href='{h(item['link'])}'>Reddit comments</a></p>"
-        return phone_page(f"r/{canonical}", body, nav=[("Apps", "/"), ("Back", f"{base}/{canonical}")], extra_css=BOARDS_CSS)
+        return phone_page(f"r/{canonical}", body, nav=[("Apps", "/"), ("Boards", base), ("Back", f"{base}/{canonical}")], extra_css=BOARDS_CSS)
