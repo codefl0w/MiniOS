@@ -296,14 +296,10 @@ def register_settings_routes(flask_app, prefix="/settings"):
         if contacts:
             for contact in contacts:
                 contact_html += f"""
-<form method="post" action="{base}/minigram">
-<input type="hidden" name="action" value="delete">
-<input type="hidden" name="telegram_id" value="{contact["telegram_id"]}">
 <div class="row">
 <strong>{h(contact["name"])}</strong><span class="small">{contact["telegram_id"]}</span>
-<input class="btn btn-danger" type="submit" value="Delete" style="float:right;" onclick="return confirm('Delete contact?');">
+<a class="btn btn-danger" href="{base}/minigram/contact/{contact['telegram_id']}/delete" style="float:right;">Delete</a>
 </div>
-</form>
 """
         else:
             contact_html += "<span class='small'>No contacts yet.</span>"
@@ -329,6 +325,32 @@ def register_settings_routes(flask_app, prefix="/settings"):
 {contact_html}
 """
         return phone_page("Minigram Settings", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
+
+    @flask_app.route(base + "/minigram/contact/<int:telegram_id>/delete", methods=["GET", "POST"])
+    def settings_contact_delete(telegram_id):
+        current = app_settings("minigram")
+        contacts = list(current.get("contacts", []))
+        target = next((c for c in contacts if c.get("telegram_id") == telegram_id), None)
+        if not target:
+            return redirect(base + "/minigram")
+
+        if request.method == "POST":
+            contacts = [c for c in contacts if c.get("telegram_id") != telegram_id]
+            update_app_settings("minigram", {"contacts": contacts})
+            return redirect(base + "/minigram")
+
+        body = f"""
+<p>Delete contact?</p>
+<div class="row">
+    <strong>{h(target.get('name'))}</strong><br>
+    <span class="small">Telegram ID: {target.get('telegram_id')}</span>
+</div>
+<form method="post" action="{base}/minigram/contact/{telegram_id}/delete" style="margin-top:12px;">
+    <input class="btn btn-danger" type="submit" value="Delete Contact">
+    <a class="btn" href="{base}/minigram">Cancel</a>
+</form>
+"""
+        return phone_page("Delete Contact", body, nav=[("Apps", "/"), ("Settings", base), ("Back", f"{base}/minigram")], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/weather", methods=["GET", "POST"])
     def settings_weather():
@@ -543,12 +565,35 @@ def register_settings_routes(flask_app, prefix="/settings"):
 {field("Show Welcome Popup (1=yes, 0=no)", f'<input type="text" name="show_welcome" value="{welcome_val}">', hint="Show welcome dialog on home screen")}
 <input type="submit" value="Save">
 </form>
-<form method="post" action="{base}/ui" style="margin-top: 15px;">
-<input type="hidden" name="action" value="reset">
-<input class="btn btn-danger" type="submit" value="Reset to Defaults" onclick="return confirm('Reset appearance to defaults?');">
-</form>
+<p style="margin-top: 15px;">
+<a class="btn btn-danger" href="{base}/ui/reset">Reset to Defaults</a>
+</p>
 """
         return phone_page("Appearance", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
+
+    @flask_app.route(base + "/ui/reset", methods=["GET", "POST"])
+    def settings_ui_reset():
+        if request.method == "POST":
+            update_app_settings("ui", {
+                "bg_color": default_app_setting("ui", "bg_color"),
+                "icon_size": default_app_setting("ui", "icon_size"),
+                "cell_height": default_app_setting("ui", "cell_height"),
+                "font_size": default_app_setting("ui", "font_size"),
+                "welcome_seen": default_app_setting("ui", "welcome_seen"),
+            })
+            resp = redirect(base + "/ui")
+            resp.delete_cookie("minios_welcome")
+            return resp
+
+        body = f"""
+<p>Reset appearance settings to default values?</p>
+<div class="small" style="margin:8px 0;">This will revert theme colors, font size, cell height, and icon sizes to MiniOS defaults.</div>
+<form method="post" action="{base}/ui/reset" style="margin-top:12px;">
+    <input class="btn btn-danger" type="submit" value="Reset to Defaults">
+    <a class="btn" href="{base}/ui">Cancel</a>
+</form>
+"""
+        return phone_page("Reset Appearance", body, nav=[("Apps", "/"), ("Settings", base), ("Back", f"{base}/ui")], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/duckduckgo", methods=["GET", "POST"])
     @flask_app.route(base + "/search", methods=["GET", "POST"])

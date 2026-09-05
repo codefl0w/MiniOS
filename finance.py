@@ -192,7 +192,7 @@ def register_finance_routes(flask_app, prefix="/finance"):
 <p>Delete entry?</p>
 <p><strong>{h(row['item'])}</strong><br>{h(money(row['price_cents']))}</p>
 <form method="post" action="{base}/{entry_id}/delete">
-<input class="btn btn-danger" type="submit" value="Delete Entry" onclick="return confirm('Delete entry?');">
+<input class="btn btn-danger" type="submit" value="Delete Entry">
 <a class="btn" href="{base}">Cancel</a>
 </form>
 """

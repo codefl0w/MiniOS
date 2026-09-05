@@ -356,22 +356,41 @@ def register_calendar_routes(flask_app, prefix="/calendar"):
     <div><input type="submit" value="Save Changes"></div>
 </form>
 
-<form method="post" action="{base}/event/{event_id}/delete" style="margin-top:12px;">
-    <input class="btn btn-danger" type="submit" value="Delete Event" onclick="return confirm('Delete this event?');">
-</form>
-<p><a class="btn" href="{h(back_url)}">Cancel</a></p>
+<p style="margin-top:12px;">
+    <a class="btn btn-danger" href="{base}/event/{event_id}/delete">Delete Event</a>
+    <a class="btn" href="{h(back_url)}">Cancel</a>
+</p>
 """
         return phone_page("Event", body, nav=[("Apps", "/"), ("", base), ("Back", back_url)], extra_css=CALENDAR_CSS)
 
-    @flask_app.route(base + "/event/<int:event_id>/delete", methods=["POST"])
+    @flask_app.route(base + "/event/<int:event_id>/delete", methods=["GET", "POST"])
     def calendar_delete(event_id):
         ev = get_event(event_id)
-        redirect_date = ev["date"] if ev else date.today().isoformat()
-        conn = connect_db()
-        conn.execute("DELETE FROM events WHERE id = ?", (event_id,))
-        conn.commit()
-        conn.close()
-        return redirect(f"{base}?d={redirect_date}")
+        if not ev:
+            return redirect(base)
+        redirect_date = ev["date"]
+        if request.method == "POST":
+            conn = connect_db()
+            conn.execute("DELETE FROM events WHERE id = ?", (event_id,))
+            conn.commit()
+            conn.close()
+            return redirect(f"{base}?d={redirect_date}")
+
+        time_str = h(ev["time"]) if ev["time"] else "All day"
+        back_url = f"{base}/event/{event_id}"
+        body = f"""
+<p>Delete event?</p>
+<div class="event-row">
+    <div class="time">{time_str}</div>
+    <strong>{h(ev['title'])}</strong>
+    <div class="desc">{h(ev['date'])}</div>
+</div>
+<form method="post" action="{base}/event/{event_id}/delete" style="margin-top:10px;">
+    <input class="btn btn-danger" type="submit" value="Delete Event">
+    <a class="btn" href="{h(back_url)}">Cancel</a>
+</form>
+"""
+        return phone_page("Delete Event", body, nav=[("Apps", "/"), ("Calendar", base), ("Back", back_url)], extra_css=CALENDAR_CSS)
 
     @flask_app.route(base + "/agenda")
     def calendar_agenda():

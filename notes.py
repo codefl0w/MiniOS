@@ -175,14 +175,29 @@ def register_notes_routes(flask_app, prefix="/notes"):
     <a class="btn" href="{base}">Cancel</a>
 </div>
 </form>
-<form method="post" action="{base}/{note_id}/delete" style="margin-top:10px;">
-<input class="btn btn-danger" type="submit" value="Delete Note" onclick="return confirm('Delete note?');">
-</form>
+<p style="margin-top:12px;"><a class="btn btn-danger" href="{base}/{note_id}/delete">Delete Note</a></p>
 <p class="small">Updated {h(format_time(row['updated']))}</p>
 """
         return phone_page("Edit Note", form, nav=[("Apps", "/"), ("Notes", base)], extra_css=NOTES_CSS)
 
-    @flask_app.route(base + "/<int:note_id>/delete", methods=["POST"])
+    @flask_app.route(base + "/<int:note_id>/delete", methods=["GET", "POST"])
     def notes_delete(note_id):
-        delete_note(note_id)
-        return redirect(base)
+        row = get_note(note_id)
+        if not row:
+            return redirect(base)
+        if request.method == "POST":
+            delete_note(note_id)
+            return redirect(base)
+
+        body = f"""
+<p>Delete note?</p>
+<div class="row">
+    <strong>{h(note_title(row['body']))}</strong>
+    <span class="small">{h(note_preview(row['body']))}</span>
+</div>
+<form method="post" action="{base}/{note_id}/delete" style="margin-top:10px;">
+    <input class="btn btn-danger" type="submit" value="Delete Note">
+    <a class="btn" href="{base}/{note_id}">Cancel</a>
+</form>
+"""
+        return phone_page("Delete Note", body, nav=[("Apps", "/"), ("Notes", base), ("Back", f"{base}/{note_id}")], extra_css=NOTES_CSS)
