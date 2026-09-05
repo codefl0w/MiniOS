@@ -283,8 +283,14 @@ DUCKDUCKGO_CSS = """
 .nav-box a{background:#0f1620;border:1px solid #263241;padding:6px 14px;color:#9fdfff;font-size:13px;font-weight:bold;display:inline-block;border-radius:3px;}
 .err{color:#ff8b8b;font-size:12px;margin:6px 0;}
 .article-title{font-size:14px;font-weight:bold;margin:0 0 8px;color:#9fdfff;}
-.article-body{font-size:12px;line-height:1.35;white-space:pre-wrap;color:#fff;}
+.article-body{font-size:12px;line-height:1.35;color:#fff;}
+.article-body p{margin:6px 0;}
+.article-body img{max-width:100%;height:auto;display:block;margin:6px 0;}
+.article-body h3, .article-body h4, .article-body h5{color:#9fdfff;margin:10px 0 4px;}
+.article-body a{color:#95e1ff;text-decoration:underline;}
+.article-body ul{padding-left:18px;margin:6px 0;}
 .orig{font-size:11px;color:#91a0af;margin:8px 0;}
+.sanitized{font-size:10px;color:#6d7f92;margin-top:10px;border-top:1px solid #263241;padding-top:4px;}
 """
 
 
@@ -429,11 +435,13 @@ def register_duckduckgo_routes(flask_app, prefix="/duckduckgo"):
 
         title = h(article.get("title") or "Article")
         body_text = format_article_html(article.get("text", ""))
+        engine = article.get("engine") or "MiniOS Reader"
 
         body = f"""
         <div class='article-title'>{title}</div>
         <div class='orig'><a href='{h(url)}' target='_blank'>[Open Original Website]</a></div>
         <div class='article-body'>{body_text}</div>
+        <div class='sanitized'>Sanitized by {h(engine)}</div>
         """
         return phone_page(title, body, nav=nav_links, extra_css=DUCKDUCKGO_CSS)
 

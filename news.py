@@ -299,10 +299,16 @@ NEWS_CSS = """
 .src{display:block;color:#ffd35a;font-size:11px;margin-top:2px;}
 .small{display:block;color:#91a0af;font-size:11px;margin-top:2px;}
 .err{color:#ff8b8b;font-size:12px;}
-.body{background:#0f1620;border:1px solid #263241;padding:6px;margin:6px 0;}
+.body{background:#0f1620;border:1px solid #263241;padding:6px;margin:6px 0;line-height:1.35;font-size:12px;color:#fff;}
+.body p{margin:6px 0;}
+.body img{max-width:100%;height:auto;display:block;margin:6px 0;}
+.body h3, .body h4, .body h5{color:#9fdfff;margin:10px 0 4px;}
+.body a{color:#95e1ff;text-decoration:underline;}
+.body ul{padding-left:18px;margin:6px 0;}
 form{margin:4px 0;}
 input[type=text]{width:100%;box-sizing:border-box;background:#fff;color:#000;border:0;padding:6px;font-size:13px;margin:0 0 4px;}
 input[type=submit]{background:#95e1ff;color:#000;border:0;padding:6px 8px;font-size:13px;}
+.sanitized{font-size:10px;color:#6d7f92;margin-top:10px;border-top:1px solid #263241;padding-top:4px;}
 """
 
 
@@ -397,11 +403,13 @@ def register_news_routes(flask_app, prefix="/news"):
         if not article.get("error") and article.get("text", "").strip() and "google.com" not in article_url:
             art_title = h(article.get("title") or item["title"])
             body_text = format_article_html(article["text"])
+            engine = article.get("engine") or "MiniOS Reader"
             body = f"""
 <div class="small">{meta}</div>
 <h3>{art_title}</h3>
 <div class="body">{body_text}</div>
 <div class="small"><a href="{h(article_url)}" target="_blank">[Source Website]</a></div>
+<div class="sanitized">Sanitized by {h(engine)}</div>
 """
         else:
             summary = h(item.get("summary") or "").replace("\n", "<br>")
@@ -415,6 +423,7 @@ def register_news_routes(flask_app, prefix="/news"):
                 body += f"""
 <div class="body">{summary}</div>
 <div class="small muted">Full article unavailable on host network ({h(err)}). Summary displayed above.</div>
+<div class="sanitized">Fallback: Google News Summary</div>
 """
             else:
                 body += f"<div class='err'>{h(err)}</div>"
