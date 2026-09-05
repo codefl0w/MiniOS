@@ -301,7 +301,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 <input type="hidden" name="telegram_id" value="{contact["telegram_id"]}">
 <div class="row">
 <strong>{h(contact["name"])}</strong><span class="small">{contact["telegram_id"]}</span>
-<input type="submit" value="Delete">
+<input class="btn btn-danger" type="submit" value="Delete" style="float:right;" onclick="return confirm('Delete contact?');">
 </div>
 </form>
 """
@@ -545,7 +545,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
 </form>
 <form method="post" action="{base}/ui" style="margin-top: 15px;">
 <input type="hidden" name="action" value="reset">
-<input type="submit" value="Reset to Defaults" style="background: #ff8b8b;">
+<input class="btn btn-danger" type="submit" value="Reset to Defaults" onclick="return confirm('Reset appearance to defaults?');">
 </form>
 """
         return phone_page("Appearance", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)

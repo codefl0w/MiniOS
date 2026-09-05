@@ -109,7 +109,6 @@ input[type=submit],button{background:#95e1ff;color:#000;border:0;padding:6px 8px
 .row{display:block;border-top:1px solid #263241;padding:7px 0;color:#fff;}
 .small{display:block;color:#91a0af;font-size:11px;margin-top:2px;}
 .actions{margin-top:7px;}
-.danger{background:#ff8b8b;color:#000;}
 """
 
 
@@ -127,7 +126,7 @@ def register_notes_routes(flask_app, prefix="/notes"):
 <input type="text" name="q" value="{h(query)}" placeholder="Search">
 <input type="submit" value="Go">
 </form>
-<p><a href="{base}/new">New note</a></p>
+<p><a class="btn" href="{base}/new">+ New Note</a></p>
 """
         if not rows:
             body += "<p class='muted'>No notes</p>"
@@ -149,7 +148,10 @@ def register_notes_routes(flask_app, prefix="/notes"):
         form = f"""
 <form method="post" action="{base}/new">
 <textarea name="body"></textarea>
-<div class="actions"><input type="submit" value="Save"></div>
+<div class="actions">
+    <input type="submit" value="Save">
+    <a class="btn" href="{base}">Cancel</a>
+</div>
 </form>
 """
         return phone_page("New Note", form, nav=[("Apps", "/"), ("Notes", base)], extra_css=NOTES_CSS)
@@ -168,10 +170,13 @@ def register_notes_routes(flask_app, prefix="/notes"):
         form = f"""
 <form method="post" action="{base}/{note_id}">
 <textarea name="body">{h(row['body'])}</textarea>
-<div class="actions"><input type="submit" value="Save"></div>
+<div class="actions">
+    <input type="submit" value="Save">
+    <a class="btn" href="{base}">Cancel</a>
+</div>
 </form>
-<form method="post" action="{base}/{note_id}/delete">
-<input class="danger" type="submit" value="Delete">
+<form method="post" action="{base}/{note_id}/delete" style="margin-top:10px;">
+<input class="btn btn-danger" type="submit" value="Delete Note" onclick="return confirm('Delete note?');">
 </form>
 <p class="small">Updated {h(format_time(row['updated']))}</p>
 """

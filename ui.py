@@ -32,17 +32,20 @@ def phone_page(title, body, nav=None, extra_css=""):
         nav_links = list(nav)
         if nav_links and nav_links[0][1] != "/" and nav_links[0][0] != "Apps":
             nav_links.insert(0, ("Apps", "/"))
-        links = [f"<a href='{h(url)}'>{h(label)}</a>" for label, url in nav_links]
+        links = [f"<a href='{h(url)}'>{h(label)}</a>" for label, url in nav_links if label]
         nav_html = f"<div class='nav'>{' | '.join(links)}</div>"
 
+    title_html = f"<h3>{h(title)}</h3>" if title else ""
     return f"""<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>
 body{{font-family:Arial;background:{bg_color};color:{TEXT};margin:0;padding:6px;font-size:{font_size}px;line-height:1.25;}}
 a{{color:{LINK};text-decoration:none;}}
 h3{{font-size:15px;margin:4px 0 8px;}}
 .nav{{margin:0 0 6px;color:{MUTED};font-size:12px;}}
 .muted{{color:{MUTED};}}
+.btn{{display:inline-block;background:#263241;color:#95e1ff;border:1px solid #3b4d61;padding:4px 10px;font-size:11px;text-decoration:none;border-radius:3px;margin:3px 0;line-height:normal;box-sizing:border-box;}}
+.btn-danger{{background:#5c1d1d !important;color:#ff9e9e !important;border:1px solid #852b2b !important;}}
 {extra_css}
-</style></head><body>{nav_html}<h3>{h(title)}</h3>{body}</body></html>"""
+</style></head><body>{nav_html}{title_html}{body}</body></html>"""
 
 
 def welcome_popup():

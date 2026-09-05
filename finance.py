@@ -125,7 +125,6 @@ td{border-bottom:1px solid #263241;padding:5px 2px;vertical-align:top;}
 .price{text-align:right;white-space:nowrap;color:#ffd35a;}
 .del{text-align:right;width:18px;}
 .del a{color:#ff8b8b;}
-.danger{background:#ff8b8b;color:#000;}
 """
 
 
@@ -193,7 +192,8 @@ def register_finance_routes(flask_app, prefix="/finance"):
 <p>Delete entry?</p>
 <p><strong>{h(row['item'])}</strong><br>{h(money(row['price_cents']))}</p>
 <form method="post" action="{base}/{entry_id}/delete">
-<input class="danger" type="submit" value="Delete">
+<input class="btn btn-danger" type="submit" value="Delete Entry" onclick="return confirm('Delete entry?');">
+<a class="btn" href="{base}">Cancel</a>
 </form>
 """
         return phone_page("Delete", body, nav=[("Apps", "/"), ("Finance", base)], extra_css=FINANCE_CSS)
