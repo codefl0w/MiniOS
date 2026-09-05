@@ -61,7 +61,6 @@ def welcome_screen():
 <img src="/github_res/MiniOS_Logo.png" alt="MiniOS Logo" class="welcome-logo">
 <div class="welcome-title">Welcome to MiniOS</div>
 <div class="welcome-text">Configure app behavior in Settings and add your keys in the .env file. Enjoy!</div>
-<div class="welcome-text">For bugs and feature requests, open an issue at <a href="">github.com/codefl0w/MiniOS/issues</a>.</div>
 <div><a href="/welcome/dismiss" class="welcome-btn" autofocus>Get Started</a></div>
 </div>"""
     return html, css
