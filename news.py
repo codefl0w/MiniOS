@@ -24,23 +24,32 @@ try:
 except ImportError:
     READABILITY_AVAILABLE = False
 
-try:
-    from googlenewsdecoder import new_decoderv1 as _gnews_decode
-    GNEWS_DECODER_AVAILABLE = True
-except ImportError:
-    GNEWS_DECODER_AVAILABLE = False
-
 BASE_URL = "https://news.google.com/rss"
 USER_AGENT = os.environ.get(
     "NEWS_USER_AGENT",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
 )
 NEWS_CACHE_TTL = int((os.environ.get("NEWS_CACHE_TTL") or "").strip() or "900")
-_cache = {}
-_article_cache = {}
 ARTICLE_CACHE_TTL = int((os.environ.get("NEWS_ARTICLE_CACHE_TTL") or "").strip() or "1800")
 ARTICLE_MAX_LENGTH = 15000
 ARTICLE_MAX_CACHE = 50
+
+_cache = {}
+_article_cache = {}
+_session = None
+
+
+def get_session():
+    global _session
+    if _session is None:
+        _session = requests.Session()
+        _session.headers.update({
+            "User-Agent": USER_AGENT,
+            "Accept-Language": "en-US,en;q=0.9",
+        })
+        _session.cookies.set("CONSENT", "YES+cb.20210720-07-p0.en+FX+410", domain=".google.com")
+        _session.cookies.set("SOCS", "CAESEwgDEgk2OTg2OTM0MjQaAmVuIAEaBgiA_L20Bg", domain=".google.com")
+    return _session
 
 
 class SummaryParser(HTMLParser):
@@ -65,8 +74,6 @@ class SummaryParser(HTMLParser):
 
 
 class ArticleParser(HTMLParser):
-    """Convert readability HTML to plain text for feature phone display."""
-
     def __init__(self):
         super().__init__()
         self.parts = []
@@ -107,8 +114,10 @@ def summary_text(html):
 
 def clean_title(title, source):
     if source and title.endswith(" - " + source):
-        return title[: -(len(source) + 3)]
-    return title
+        return title[: -(len(source) + 3)].strip()
+    if " - " in title:
+        return title.rsplit(" - ", 1)[0].strip()
+    return title.strip()
 
 
 def format_date(value):
@@ -200,12 +209,8 @@ def fetch_news(params, force=False):
 
     url = build_url(params)
     try:
-        headers = {
-            "User-Agent": USER_AGENT,
-            "Accept": "application/rss+xml, application/xml, text/xml, */*",
-            "Accept-Language": "en-US,en;q=0.9",
-        }
-        resp = requests.get(url, headers=headers, timeout=15)
+        session = get_session()
+        resp = session.get(url, timeout=15)
         resp.raise_for_status()
         data = parse_feed(resp.text)
         data.update({"url": url, "ts": now, "error": "", "params": params})
@@ -229,26 +234,27 @@ def cache_age(ts):
 
 
 def decode_gnews_token(source_url):
-    """Direct decoder for Google News RSS articles using browser headers and consent cookies."""
     try:
         base64_str = source_url.split("/")[-1].split("?")[0]
-        cookies = {
-            "CONSENT": "YES+cb.20210720-07-p0.en+FX+410",
-            "SOCS": "CAESEwgDEgk2OTg2OTM0MjQaAmVuIAEaBgiA_L20Bg",
-        }
-        headers = {
-            "User-Agent": USER_AGENT,
-            "Accept-Language": "en-US,en;q=0.9",
-        }
+        session = get_session()
         sg, ts = None, None
-        for endpoint in [f"https://news.google.com/articles/{base64_str}", f"https://news.google.com/rss/articles/{base64_str}"]:
-            r = requests.get(endpoint, headers=headers, cookies=cookies, timeout=10)
-            if r.status_code == 200:
-                sg_match = re.search(r'data-n-a-sg="([^"]+)"', r.text)
-                ts_match = re.search(r'data-n-a-ts="([^"]+)"', r.text)
-                if sg_match and ts_match:
-                    sg, ts = sg_match.group(1), ts_match.group(1)
-                    break
+        endpoints = [
+            f"https://news.google.com/articles/{base64_str}?hl=en-US&gl=US&ceid=US:en",
+            f"https://news.google.com/rss/articles/{base64_str}?hl=en-US&gl=US&ceid=US:en",
+            f"https://news.google.com/articles/{base64_str}",
+        ]
+        for ep in endpoints:
+            try:
+                r = session.get(ep, timeout=8)
+                if r.status_code == 200:
+                    sg_match = re.search(r'data-n-a-sg="([^"]+)"', r.text)
+                    ts_match = re.search(r'data-n-a-ts="([^"]+)"', r.text)
+                    if sg_match and ts_match:
+                        sg, ts = sg_match.group(1), ts_match.group(1)
+                        break
+            except Exception:
+                continue
+
         if not (sg and ts):
             return None
 
@@ -257,72 +263,65 @@ def decode_gnews_token(source_url):
             "Fbv4je",
             f'["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"{base64_str}",{ts},"{sg}"]',
         ]
-        post_headers = {
-            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-            "User-Agent": USER_AGENT,
-        }
-        resp = requests.post(
+        resp = session.post(
             batch_url,
-            headers=post_headers,
-            cookies=cookies,
+            headers={"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"},
             data=f"f.req={quote(json.dumps([[payload]]))}",
-            timeout=10,
+            timeout=8,
         )
         if resp.status_code == 200:
-            parsed = json.loads(resp.text.split("\n\n")[1])[:-2]
-            return json.loads(parsed[0][2])[1]
+            parts = resp.text.split("\n\n")
+            if len(parts) > 1:
+                parsed = json.loads(parts[1])[:-2]
+                url = json.loads(parsed[0][2])[1]
+                if url and "google.com" not in url:
+                    return url
     except Exception:
         pass
     return None
 
 
 def resolve_via_search(title, source_url=""):
-    """Find real destination article URL via DuckDuckGo search (whitelisted on PythonAnywhere)."""
     try:
-        domain = urlparse(source_url).netloc.replace("www.", "") if source_url else ""
-        query = f'"{title}" site:{domain}' if domain else f'"{title}"'
         from duckduckgo import search_duckduckgo
-        res = search_duckduckgo(query)
-        if res.get("items"):
-            first_url = res["items"][0]["url"]
-            if "google.com" not in first_url:
-                return first_url
+        cleaned = re.sub(r'["\']', '', title).strip()
+        domain = urlparse(source_url).netloc.replace("www.", "") if source_url else ""
+        queries = [f"{cleaned} site:{domain}", cleaned] if domain else [cleaned]
+        for q in queries:
+            res = search_duckduckgo(q)
+            for it in res.get("items", []):
+                u = it.get("url", "")
+                if u and "google.com" not in u and "duckduckgo.com" not in u:
+                    if domain and domain in u:
+                        return u
+                    if not domain:
+                        return u
+            if res.get("items"):
+                first = res["items"][0].get("url", "")
+                if first and "google.com" not in first and "duckduckgo.com" not in first:
+                    return first
     except Exception:
         pass
     return None
 
 
 def resolve_news_url(url, title="", source_url=""):
-    """Resolve Google News URL to actual article URL with multi-layer fallback."""
     if not url or "news.google.com" not in url:
         return url
 
-    # 1. Direct browser-header-based decode with consent cookies
     decoded = decode_gnews_token(url)
-    if decoded and "google.com" not in decoded:
+    if decoded:
         return decoded
 
-    # 2. googlenewsdecoder package fallback
-    if GNEWS_DECODER_AVAILABLE:
-        try:
-            result = _gnews_decode(url)
-            if result.get("status") and result.get("decoded_url"):
-                decoded_url = result["decoded_url"]
-                if "google.com" not in decoded_url:
-                    return decoded_url
-        except Exception:
-            pass
-
-    # 3. DuckDuckGo search fallback (allowlisted on PA, finds exact article URL by title)
     if title:
         search_decoded = resolve_via_search(title, source_url)
         if search_decoded:
             return search_decoded
 
-    # 4. HTTP redirect follow fallback
     try:
-        resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=15, allow_redirects=True)
-        if "google.com" not in resp.url:
+        session = get_session()
+        resp = session.get(url, timeout=10, allow_redirects=True)
+        if resp.url and "google.com" not in resp.url:
             return resp.url
     except Exception:
         pass
@@ -331,28 +330,21 @@ def resolve_news_url(url, title="", source_url=""):
 
 
 def article_to_text(html):
-    """Convert readability HTML output to plain text."""
     parser = ArticleParser()
     parser.feed(html or "")
     return parser.text()
 
 
 def fetch_via_jina(url):
-    """Fetch full article content via r.jina.ai (allowlisted on PythonAnywhere free tier)."""
     try:
-        jina_url = f"https://r.jina.ai/{url}"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        resp = requests.get(jina_url, headers=headers, timeout=20)
+        resp = requests.get(f"https://r.jina.ai/{url}", headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
         if resp.status_code == 200 and resp.text:
             text = resp.text
             title = ""
             title_match = re.search(r"^Title:\s*(.+)$", text, re.MULTILINE)
             if title_match:
                 title = title_match.group(1).strip()
-            if "Markdown Content:" in text:
-                body = text.split("Markdown Content:", 1)[1].strip()
-            else:
-                body = text
+            body = text.split("Markdown Content:", 1)[1].strip() if "Markdown Content:" in text else text
             if len(body) > ARTICLE_MAX_LENGTH:
                 body = body[:ARTICLE_MAX_LENGTH] + "\n\n[article trimmed]"
             if len(body.strip()) > 50:
@@ -363,14 +355,12 @@ def fetch_via_jina(url):
 
 
 def format_article_html(text):
-    """Format article text for phone display, converting markdown links to HTML."""
     safe_text = h(text)
     converted = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'<a href="\2" target="_blank">\1</a>', safe_text)
     return converted.replace("\n", "<br>")
 
 
 def fetch_article(url):
-    """Fetch and extract article content using readability, falling back to Jina reader on proxy blocks."""
     if not url or "news.google.com" in url or "google.com" in url:
         return {"title": "", "text": "", "url": url, "ts": time.time(), "error": "Google News link could not be decoded"}
 
@@ -380,43 +370,38 @@ def fetch_article(url):
         return cached
 
     last_err = ""
-    # 1. Try direct readability extraction
     if READABILITY_AVAILABLE:
         try:
-            headers = {
-                "User-Agent": USER_AGENT,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.9",
-            }
-            resp = requests.get(url, headers=headers, timeout=15)
+            resp = requests.get(
+                url,
+                headers={
+                    "User-Agent": USER_AGENT,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
+                timeout=15,
+            )
             resp.raise_for_status()
             doc = ReadabilityDocument(resp.text)
-            title = doc.title()
             text = article_to_text(doc.summary())
-
             if text and len(text.strip()) > 100:
                 if len(text) > ARTICLE_MAX_LENGTH:
                     text = text[:ARTICLE_MAX_LENGTH] + "\n\n[article trimmed]"
-
-                result = {"title": title, "text": text, "url": url, "ts": now, "error": ""}
-                _article_cache[url] = result
+                res = {"title": doc.title(), "text": text, "url": url, "ts": now, "error": ""}
+                _article_cache[url] = res
                 if len(_article_cache) > ARTICLE_MAX_CACHE:
-                    oldest = min(_article_cache, key=lambda k: _article_cache[k]["ts"])
-                    del _article_cache[oldest]
-                return result
+                    del _article_cache[min(_article_cache, key=lambda k: _article_cache[k]["ts"])]
+                return res
         except Exception as exc:
             last_err = str(exc)
 
-    # 2. If direct fetch fails (e.g. PythonAnywhere proxy blocks domain / 403), use allowlisted Jina reader
     jina_res = fetch_via_jina(url)
     if jina_res and not jina_res.get("error") and len(jina_res.get("text", "").strip()) > 50:
         _article_cache[url] = jina_res
         if len(_article_cache) > ARTICLE_MAX_CACHE:
-            oldest = min(_article_cache, key=lambda k: _article_cache[k]["ts"])
-            del _article_cache[oldest]
+            del _article_cache[min(_article_cache, key=lambda k: _article_cache[k]["ts"])]
         return jina_res
 
-    # 3. Return error if both fail
     err_str = jina_res.get("error") or last_err or "Article fetch failed"
     return {"title": "", "text": "", "url": url, "ts": now, "error": err_str}
 
