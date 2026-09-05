@@ -301,13 +301,13 @@ def register_calendar_routes(flask_app, prefix="/calendar"):
 </form>
 <p><a class="btn" href="{h(back_url)}">Cancel</a></p>
 """
-        return phone_page("New Event", body, nav=[("Apps", "/"), ("", base), ("Back", back_url)], extra_css=CALENDAR_CSS)
+        return phone_page("New Event", body, nav=[("Apps", "/"), ("Calendar", base), ("Back", back_url)], extra_css=CALENDAR_CSS)
 
     @flask_app.route(base + "/event/<int:event_id>", methods=["GET", "POST"])
     def calendar_event_detail(event_id):
         ev = get_event(event_id)
         if not ev:
-            return phone_page("Not Found", "<div class='err'>Event not found.</div>", nav=[("Apps", "/"), ("", base)]), 404
+            return phone_page("Not Found", "<div class='err'>Event not found.</div>", nav=[("Apps", "/"), ("Calendar", base)]), 404
 
         back_url = f"{base}?d={ev['date']}"
         error = ""
@@ -361,7 +361,7 @@ def register_calendar_routes(flask_app, prefix="/calendar"):
     <a class="btn" href="{h(back_url)}">Cancel</a>
 </p>
 """
-        return phone_page("Event", body, nav=[("Apps", "/"), ("", base), ("Back", back_url)], extra_css=CALENDAR_CSS)
+        return phone_page("Event", body, nav=[("Apps", "/"), ("Calendar", base), ("Back", back_url)], extra_css=CALENDAR_CSS)
 
     @flask_app.route(base + "/event/<int:event_id>/delete", methods=["GET", "POST"])
     def calendar_delete(event_id):
@@ -416,4 +416,4 @@ def register_calendar_routes(flask_app, prefix="/calendar"):
             body += "<div class='muted small'>No upcoming events found.</div>"
 
         body += f"<p><a class='btn' href='{base}'>&laquo; Back to Month Grid</a></p>"
-        return phone_page("Agenda", body, nav=[("Apps", "/"), ("", base)], extra_css=CALENDAR_CSS)
+        return phone_page("Agenda", body, nav=[("Apps", "/"), ("Calendar", base)], extra_css=CALENDAR_CSS)
