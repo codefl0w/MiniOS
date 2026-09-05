@@ -48,25 +48,26 @@ h3{{font-size:15px;margin:4px 0 8px;}}
 </style></head><body>{nav_html}{title_html}{body}</body></html>"""
 
 
-def welcome_popup():
+def welcome_screen():
     css = f"""
-.popup-overlay{{position:fixed;top:0;left:0;width:100%;height:100%;background:#000000;background:rgba(10,14,22,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:10px;}}
-.popup-box{{background:{PANEL};border:1px solid {BORDER};border-radius:6px;padding:14px 12px;max-width:240px;width:90%;box-sizing:border-box;text-align:center;margin:20px auto;}}
-.popup-logo{{max-width:160px;width:80%;height:auto;display:block;margin:0 auto 10px;}}
-.popup-title{{font-size:14px;font-weight:bold;color:{TEXT};margin:0 0 8px;}}
-.popup-text{{font-size:11px;line-height:1.35;color:{MUTED};margin:0 0 12px;text-align:center;}}
-.popup-btn{{display:inline-block;background:{BORDER};color:{LINK};border:1px solid #3b4d61;padding:5px 16px;font-size:12px;font-weight:bold;text-decoration:none;border-radius:4px;}}
-.popup-btn:hover{{background:#334458;color:{TEXT};}}
+.welcome-wrap{{text-align:center;padding:20px 8px;max-width:240px;margin:0 auto;box-sizing:border-box;}}
+.welcome-logo{{max-width:150px;width:75%;height:auto;display:block;margin:0 auto 12px;}}
+.welcome-title{{font-size:15px;font-weight:bold;color:{TEXT};margin:0 0 8px;}}
+.welcome-text{{font-size:11px;line-height:1.4;color:{MUTED};margin:0 0 16px;}}
+.welcome-btn{{display:inline-block;background:{BORDER};color:{LINK};border:1px solid #3b4d61;padding:7px 22px;font-size:13px;font-weight:bold;text-decoration:none;border-radius:4px;}}
+.welcome-btn:hover{{background:#334458;color:{TEXT};}}
 """
-    html = f"""<div id="welcome-popup" class="popup-overlay">
-<div class="popup-box">
-<img src="/github_res/MiniOS_Logo.png" alt="MiniOS Logo" class="popup-logo">
-<div class="popup-title">Welcome to MiniOS</div>
-<div class="popup-text">You can configure app behaviour in the settings app and set your keys in the .env file on your host. Enjoy!</div>
-<div><a href="/welcome/dismiss" class="popup-btn" onclick="document.getElementById('welcome-popup').style.display='none';">OK</a></div>
-</div>
+    html = f"""<div class="welcome-wrap">
+<img src="/github_res/MiniOS_Logo.png" alt="MiniOS Logo" class="welcome-logo">
+<div class="welcome-title">Welcome to MiniOS</div>
+<div class="welcome-text">Configure app behavior in Settings and add your keys in the .env file. Enjoy!</div>
+<div class="welcome-text">For bugs and feature requests, open an issue at <a href="">github.com/codefl0w/MiniOS/issues</a>.</div>
+<div><a href="/welcome/dismiss" class="welcome-btn" autofocus>Get Started</a></div>
 </div>"""
     return html, css
+
+
+welcome_popup = welcome_screen
 
 
 def app_drawer(apps, slots=9):

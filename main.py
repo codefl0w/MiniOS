@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 load_env()
 
 from minigram import PORT, register_minigram_routes
-from ui import app_drawer, phone_page, welcome_popup
+from ui import app_drawer, phone_page, welcome_screen
 
 try:
     from ai import register_ai_routes
@@ -206,9 +206,8 @@ def root():
         welcome_seen = True
 
     if not welcome_seen:
-        pop_html, pop_css = welcome_popup()
-        body += pop_html
-        css += pop_css
+        screen_html, screen_css = welcome_screen()
+        return phone_page("", screen_html, extra_css=screen_css)
 
     return phone_page("", body, extra_css=css)
 
