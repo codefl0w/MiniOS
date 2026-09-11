@@ -83,6 +83,13 @@ except Exception as exc:
     register_calendar_routes = None
     CALENDAR_IMPORT_ERROR = exc
 
+try:
+    from maps import register_maps_routes
+    MAPS_IMPORT_ERROR = None
+except Exception as exc:
+    register_maps_routes = None
+    MAPS_IMPORT_ERROR = exc
+
 BASE_DIR = os.path.dirname(__file__)
 ICONS_DIR = os.path.abspath(os.environ.get("ICONS_DIR", os.path.join(BASE_DIR, "icons")))
 GITHUB_RES_DIR = os.path.abspath(os.path.join(BASE_DIR, "github_res"))
@@ -117,6 +124,8 @@ if register_weather_routes:
     register_weather_routes(app, "/weather")
 if register_calendar_routes:
     register_calendar_routes(app, "/calendar")
+if register_maps_routes:
+    register_maps_routes(app, "/maps")
 
 
 @app.route("/icons/<path:filename>")
@@ -171,12 +180,15 @@ def root():
         {"name": "Gmail", "url": "/mail", "icon": "gmail.png", "disabled": MAIL_IMPORT_ERROR is not None},
         {"name": "News", "url": "/news", "icon": "news.png", "disabled": NEWS_IMPORT_ERROR is not None},
         {"name": "Calendar", "url": "/calendar", "icon": "calendar.png", "disabled": CALENDAR_IMPORT_ERROR is not None},
+        {"name": "Maps", "url": "/maps", "icon": "maps.png", "disabled": MAPS_IMPORT_ERROR is not None},
         {"name": "Settings", "label": "Settings", "url": "/settings", "icon": "settings.png", "disabled": SETTINGS_IMPORT_ERROR is not None},
     ]
     apps = [a for a in apps if a["name"] not in disabled_apps]
     body, css = app_drawer(apps)
     if CALENDAR_IMPORT_ERROR and "Calendar" not in disabled_apps:
         body += f"<div class='muted'>Calendar unavailable: {html_escape(str(CALENDAR_IMPORT_ERROR))}</div>"
+    if MAPS_IMPORT_ERROR and "Maps" not in disabled_apps:
+        body += f"<div class='muted'>Maps unavailable: {html_escape(str(MAPS_IMPORT_ERROR))}</div>"
     if DUCKDUCKGO_IMPORT_ERROR and "DuckDuckGo" not in disabled_apps:
         body += f"<div class='muted'>DuckDuckGo unavailable: {html_escape(str(DUCKDUCKGO_IMPORT_ERROR))}</div>"
     if WEATHER_IMPORT_ERROR and "Weather" not in disabled_apps:
