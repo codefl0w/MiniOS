@@ -444,8 +444,9 @@ MAPS_CSS = """
 .route-pts strong{color:#fff;}
 .steps-box{border-top:1px solid #263241;margin-top:8px;padding-top:6px;}
 .steps-title{font-size:12px;font-weight:bold;color:#9fdfff;margin-bottom:6px;}
-ol.steps-list{margin:0;padding-left:18px;font-size:12px;line-height:1.45;}
-ol.steps-list li{margin-bottom:5px;color:#fff;}
+.steps-list{margin:0;padding:0;}
+.step-item{margin-bottom:6px;font-size:12px;line-height:1.4;color:#fff;}
+.step-num{color:#ffd35a;font-weight:bold;margin-right:4px;}
 .recent-box{margin-top:10px;border-top:1px solid #263241;padding-top:6px;}
 .recent-title{font-size:11px;color:#91a0af;font-weight:bold;margin-bottom:4px;}
 .recent-item{background:#0f1620;border:1px solid #263241;padding:4px 6px;margin:3px 0;border-radius:2px;}
@@ -638,11 +639,11 @@ def register_maps_routes(flask_app, prefix="/maps"):
         mode_name = "Walking [W]" if mode == "foot" else ("Driving [D]" if mode == "driving" else "Cycling [C]")
         reverse_url = f"{base}/directions?from={h(to_q)}&to={h(from_q)}&mode={h(mode)}"
 
-        # Format steps list
-        steps_html = "<ol class='steps-list'>"
-        for s in steps:
-            steps_html += f"<li>{h(s['instruction'])}</li>"
-        steps_html += "</ol>"
+        # Format steps list with explicit numbering (browser native <ol> rolls over mod 10 on feature phones)
+        steps_html = "<div class='steps-list'>"
+        for i, s in enumerate(steps, 1):
+            steps_html += f"<div class='step-item'><span class='step-num'>{i}.</span> {h(s['instruction'])}</div>"
+        steps_html += "</div>"
 
         body = f"""
 <div class="route-summary">
