@@ -34,7 +34,7 @@ NEWS_LANGUAGES = {
     "es-ES": {"label": "Spanish ES", "hl": "es", "gl": "ES", "ceid": "ES:es"},
 }
 WEATHER_TEMPERATURE_UNITS = ("celsius", "fahrenheit")
-MANAGEABLE_APPS = ("Minigram", "DuckDuckGo", "Weather", "Notes", "AI", "Finance", "Boards", "Gmail", "News", "Calendar", "Maps")
+MANAGEABLE_APPS = ("Minigram", "DuckDuckGo", "Weather", "Notes", "AI", "Finance", "Boards", "Gmail", "News", "Calendar", "Maps", "Chess")
 
 DEFAULTS = {
     "minigram": {
