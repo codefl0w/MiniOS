@@ -4,3 +4,4 @@ urllib3
 Pillow
 lxml
 readability-lxml
+python-chess
