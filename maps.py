@@ -457,6 +457,14 @@ ol.steps-list li{margin-bottom:5px;color:#fff;}
 # ---------------------------------------------------------------------------
 # Flask Routes
 # ---------------------------------------------------------------------------
+def get_default_location():
+    try:
+        from settings import app_settings
+        return (app_settings("maps").get("default_location") or "").strip()
+    except Exception:
+        return ""
+
+
 def register_maps_routes(flask_app, prefix="/maps"):
     base = prefix.rstrip("/")
 
@@ -465,6 +473,10 @@ def register_maps_routes(flask_app, prefix="/maps"):
         from_val = request.args.get("from", "").strip()
         to_val = request.args.get("to", "").strip()
         mode_val = request.args.get("mode", "foot").strip()
+
+        default_loc = get_default_location()
+        if not from_val and default_loc:
+            from_val = default_loc
 
         # Fetch recent routes
         conn = connect_db()
@@ -486,14 +498,15 @@ def register_maps_routes(flask_app, prefix="/maps"):
 """
             recent_html += "</div>"
 
+        from_placeholder = f"Default: {default_loc}" if default_loc else "Name or Lat,Lon (e.g. 51.5033, -0.1195)"
         body = f"""
 <form class="maps-form" method="get" action="{base}/directions">
     <div style="font-weight:bold;color:#9fdfff;margin-bottom:4px;">Directions</div>
     <label>Current Location / Origin</label>
-    <input type="text" name="from" value="{h(from_val)}" placeholder="Name or Lat,Lon (e.g. 51.5033, -0.1195)" required>
+    <input type="text" name="from" value="{h(from_val)}" placeholder="{h(from_placeholder)}">
     
     <label>Destination</label>
-    <input type="text" name="to" value="{h(to_val)}" placeholder="Name or Lat,Lon (e.g. 51.5007, -0.1246)" required>
+    <input type="text" name="to" value="{h(to_val)}" placeholder="Name or Lat,Lon (e.g. 51.5007, -0.1246)" required autofocus>
     
     <label>Travel Mode</label>
     <select name="mode">
@@ -525,6 +538,9 @@ def register_maps_routes(flask_app, prefix="/maps"):
         mode = request.args.get("mode", "foot").strip()
         if mode not in ("foot", "driving", "bike"):
             mode = "foot"
+
+        if not from_q:
+            from_q = get_default_location()
 
         if not from_q or not to_q:
             return redirect(base)

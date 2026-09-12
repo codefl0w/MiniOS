@@ -34,7 +34,7 @@ NEWS_LANGUAGES = {
     "es-ES": {"label": "Spanish ES", "hl": "es", "gl": "ES", "ceid": "ES:es"},
 }
 WEATHER_TEMPERATURE_UNITS = ("celsius", "fahrenheit")
-MANAGEABLE_APPS = ("Minigram", "DuckDuckGo", "Weather", "Notes", "AI", "Finance", "Boards", "Gmail", "News", "Calendar")
+MANAGEABLE_APPS = ("Minigram", "DuckDuckGo", "Weather", "Notes", "AI", "Finance", "Boards", "Gmail", "News", "Calendar", "Maps")
 
 DEFAULTS = {
     "minigram": {
@@ -81,6 +81,9 @@ DEFAULTS = {
     "mail": {
         "limit": 40,
         "cache_ttl": 600,
+    },
+    "maps": {
+        "default_location": "",
     },
     "apps": {
         "disabled": [],
@@ -233,6 +236,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
             ("Boards", "Subreddits and sort", f"{base}/boards"),
             ("News", "Google News defaults", f"{base}/news"),
             ("Gmail", "Limit and cache TTL", f"{base}/mail"),
+            ("Maps", "Default location", f"{base}/maps"),
             ("About", "MiniOS info", f"{base}/about"),
         ]
         body = ""
@@ -625,6 +629,21 @@ def register_settings_routes(flask_app, prefix="/settings"):
 </form>
 """
         return phone_page("DuckDuckGo Settings", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
+
+    @flask_app.route(base + "/maps", methods=["GET", "POST"])
+    def settings_maps():
+        current = app_settings("maps")
+        if request.method == "POST":
+            loc = request.form.get("default_location", "").strip()
+            update_app_settings("maps", {"default_location": loc})
+            return redirect(base)
+        body = f"""
+<form method="post" action="{base}/maps">
+{field("Default Location", f'<input type="text" name="default_location" value="{h(current.get("default_location", ""))}">', "Address or lat,lon used when 'From' is empty")}
+{save_button()}
+</form>
+"""
+        return phone_page("Maps Settings", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/about")
     def settings_about():
