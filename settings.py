@@ -648,9 +648,9 @@ def register_settings_routes(flask_app, prefix="/settings"):
     @flask_app.route(base + "/about")
     def settings_about():
         body = """
-<div class="row"><strong>MiniOS Version:</strong><span class="small">V1.1.0</span></div>
+<div class="row"><strong>MiniOS Version:</strong><span class="small">V2.0.0</span></div>
 <div class="row"><strong>Made by:</strong><span class="small">fl0w</span></div>
 <div class="row"><strong>Platform:</strong><span class="small">Flask</span></div>
-<div class="row"><strong>Target:</strong><span class="small">Opera Mini / Dorado</span></div>
+<div class="row"><strong>Target:</strong><span class="small">Opera Mini / Dorado on MocorOS</span></div>
 """
         return phone_page("About", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
