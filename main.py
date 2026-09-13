@@ -1,9 +1,11 @@
 import base64
 import os
+import time
 from html import escape as html_escape
 
 from env_loader import load_env
-from flask import Flask, make_response, redirect, request, send_from_directory
+from flask import Flask, make_response, redirect, request, send_from_directory, session
+from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 
 load_env()
@@ -135,6 +137,133 @@ if register_maps_routes:
     register_maps_routes(app, "/maps")
 if register_chess_routes:
     register_chess_routes(app, "/chess")
+
+LOGIN_CSS = """
+form{margin:0;}
+input[type=password]{width:100%;box-sizing:border-box;background:#fff;color:#000;border:0;padding:6px;font-size:13px;margin:0 0 6px;font-family:Arial;}
+input[type=submit]{background:#95e1ff;color:#000;border:0;padding:6px 12px;font-size:13px;font-weight:bold;}
+.field{margin:0 0 8px;}
+.fieldname{color:#ffd35a;margin:0 0 2px;}
+.alert{padding:6px 8px;margin:6px 0;font-size:12px;border-radius:2px;}
+.alert-error{background:#5c1d1d;color:#ffb0b0;border:1px solid #852b2b;}
+.alert-info{background:#1d394a;color:#a3dcf3;border:1px solid #2b5670;}
+"""
+
+
+@app.before_request
+def check_authentication():
+    path = request.path
+    if (
+        path == "/login"
+        or path.startswith("/icons/")
+        or path.startswith("/github_res/")
+        or path == "/favicon.ico"
+    ):
+        return None
+
+    if not app_settings:
+        return None
+
+    try:
+        auth_cfg = app_settings("auth")
+    except Exception:
+        return None
+
+    pwd_hash = auth_cfg.get("password_hash", "")
+    if not pwd_hash:
+        return None
+
+    expiry_minutes = auth_cfg.get("expiry_minutes", 10)
+    try:
+        expiry_minutes = int(expiry_minutes)
+        if expiry_minutes <= 0:
+            expiry_minutes = 10
+    except (TypeError, ValueError):
+        expiry_minutes = 10
+
+    expiry_seconds = expiry_minutes * 60
+    now = time.time()
+
+    is_authenticated = session.get("authenticated", False)
+    last_active = session.get("last_active", 0)
+
+    if is_authenticated:
+        if (now - last_active) <= expiry_seconds:
+            session["last_active"] = now
+            return None
+        else:
+            session.clear()
+            next_url = request.full_path.rstrip("?") if request.method == "GET" else request.path
+            return redirect(f"/login?msg=Session+expired.+Please+unlock.&next={next_url}")
+
+    next_url = request.full_path.rstrip("?") if request.method == "GET" else request.path
+    return redirect(f"/login?next={next_url}")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if not app_settings:
+        return redirect("/")
+
+    auth_cfg = app_settings("auth")
+    pwd_hash = auth_cfg.get("password_hash", "")
+    if not pwd_hash:
+        return redirect("/")
+
+    next_url = request.values.get("next", "/")
+    if not next_url.startswith("/") or next_url.startswith("//") or next_url.startswith("/login"):
+        next_url = "/"
+
+    if session.get("authenticated", False):
+        expiry_minutes = auth_cfg.get("expiry_minutes", 10)
+        try:
+            expiry_minutes = int(expiry_minutes)
+            if expiry_minutes <= 0:
+                expiry_minutes = 10
+        except Exception:
+            expiry_minutes = 10
+        if (time.time() - session.get("last_active", 0)) <= (expiry_minutes * 60):
+            return redirect(next_url)
+
+    error = ""
+    msg = request.args.get("msg", "")
+
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        if check_password_hash(pwd_hash, password):
+            session["authenticated"] = True
+            session["last_active"] = time.time()
+            return redirect(next_url)
+        else:
+            error = "Incorrect password."
+
+    alert_html = ""
+    if error:
+        alert_html = f"<div class='alert alert-error'>{html_escape(error)}</div>"
+    elif msg:
+        alert_html = f"<div class='alert alert-info'>{html_escape(msg)}</div>"
+
+    body = f"""
+{alert_html}
+<div class="body" style="background:#0f1620;border:1px solid #263241;padding:8px;margin:8px 0;">
+<form method="post" action="/login">
+<input type="hidden" name="next" value="{html_escape(next_url)}">
+<div class="field">
+<div class="fieldname">Password</div>
+<input type="password" name="password" autofocus>
+</div>
+<input type="submit" value="Unlock">
+</form>
+</div>
+"""
+    return phone_page("Unlock MiniOS", body, nav=None, extra_css=LOGIN_CSS)
+
+
+@app.route("/lock")
+@app.route("/logout")
+def lock():
+    session.clear()
+    return redirect("/login?msg=MiniOS+locked.")
 
 
 @app.route("/icons/<path:filename>")

@@ -1,10 +1,12 @@
 import json
 import os
 import re
+import time
 from copy import deepcopy
 
 from env_loader import load_env
-from flask import redirect, request
+from flask import redirect, request, session
+from werkzeug.security import check_password_hash, generate_password_hash
 
 load_env()
 
@@ -87,6 +89,10 @@ DEFAULTS = {
     },
     "apps": {
         "disabled": [],
+    },
+    "auth": {
+        "password_hash": "",
+        "expiry_minutes": 10,
     },
     "ui": {
         "bg_color": "#191f2e",
@@ -201,13 +207,16 @@ SETTINGS_CSS = """
 .row{display:block;border-top:1px solid #263241;padding:8px 0;color:#fff;}
 .small{display:block;color:#91a0af;font-size:11px;margin-top:2px;}
 form{margin:0;}
-input[type=text],textarea{width:100%;box-sizing:border-box;background:#fff;color:#000;border:0;padding:6px;font-size:13px;margin:0 0 5px;font-family:Arial;}
+input[type=text],input[type=password],input[type=number],textarea{width:100%;box-sizing:border-box;background:#fff;color:#000;border:0;padding:6px;font-size:13px;margin:0 0 5px;font-family:Arial;}
 textarea{height:120px;}
 input[type=submit]{background:#95e1ff;color:#000;border:0;padding:6px 8px;font-size:13px;}
 .body{background:#0f1620;border:1px solid #263241;padding:6px;margin:6px 0;}
 .field{margin:0 0 7px;}
 .fieldname{color:#ffd35a;margin:0 0 2px;}
 .hint{color:#91a0af;font-size:11px;margin:-3px 0 4px;}
+.alert{padding:6px 8px;margin:6px 0;font-size:12px;border-radius:2px;}
+.alert-error{background:#5c1d1d;color:#ffb0b0;border:1px solid #852b2b;}
+.alert-success{background:#1d4a2a;color:#a3f3b5;border:1px solid #2b703e;}
 """
 
 
@@ -229,6 +238,7 @@ def register_settings_routes(flask_app, prefix="/settings"):
         rows = [
             ("Apps", "Enable or disable apps", f"{base}/apps"),
             ("Appearance", "Colors and sizes", f"{base}/ui"),
+            ("Password", "Set, change, or reset password", f"{base}/password"),
             ("DuckDuckGo", "Cache and reader mode", f"{base}/duckduckgo"),
             ("Minigram", "Contacts and timestamps", f"{base}/minigram"),
             ("Weather", "Location and coordinates", f"{base}/weather"),
@@ -644,6 +654,160 @@ def register_settings_routes(flask_app, prefix="/settings"):
 </form>
 """
         return phone_page("Maps Settings", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
+
+    @flask_app.route(base + "/password", methods=["GET", "POST"])
+    @flask_app.route(base + "/password/set", methods=["GET", "POST"])
+    @flask_app.route(base + "/password/change", methods=["GET", "POST"])
+    def settings_password():
+        auth_cfg = app_settings("auth")
+        pwd_hash = auth_cfg.get("password_hash", "")
+        is_set = bool(pwd_hash)
+        expiry_min = auth_cfg.get("expiry_minutes", 10)
+        error = ""
+        msg = request.args.get("msg", "")
+
+        if request.method == "POST":
+            action = request.form.get("action", "")
+            if action == "save_expiry":
+                val = as_int(request.form.get("expiry_minutes"), 10)
+                if val <= 0:
+                    val = 10
+                update_app_settings("auth", {"expiry_minutes": val})
+                return redirect(base + "/password?msg=Expiry+duration+saved")
+            elif action == "save_password":
+                if not is_set:
+                    pwd = request.form.get("password", "")
+                    confirm = request.form.get("confirm_password", "")
+                    if not pwd:
+                        error = "Password cannot be empty."
+                    elif pwd != confirm:
+                        error = "Passwords do not match."
+                    else:
+                        h_val = generate_password_hash(pwd)
+                        update_app_settings("auth", {"password_hash": h_val})
+                        session["authenticated"] = True
+                        session["last_active"] = time.time()
+                        return redirect(base + "/password?msg=Password+set+successfully")
+                else:
+                    cur_pwd = request.form.get("current_password", "")
+                    new_pwd = request.form.get("new_password", "")
+                    if not check_password_hash(pwd_hash, cur_pwd):
+                        error = "Current password incorrect."
+                    elif not new_pwd:
+                        error = "New password cannot be empty."
+                    else:
+                        h_val = generate_password_hash(new_pwd)
+                        update_app_settings("auth", {"password_hash": h_val})
+                        session["authenticated"] = True
+                        session["last_active"] = time.time()
+                        return redirect(base + "/password?msg=Password+changed+successfully")
+
+        alert_html = ""
+        if error:
+            alert_html = f"<div class='alert alert-error'>{h(error)}</div>"
+        elif msg:
+            alert_html = f"<div class='alert alert-success'>{h(msg)}</div>"
+
+        set_or_change = "Change password" if is_set else "Set password"
+        opts_html = f"""
+<div style="margin:2px 0 10px;">
+<a class="btn" style="background:#1a3c5a;" href="{base}/password"><strong>{h(set_or_change)}</strong></a>
+<a class="btn" href="{base}/password/reset"><strong>Reset password</strong></a>
+</div>
+"""
+        if not is_set:
+            form_title = "Set Password"
+            form_inputs = f"""
+{field("Password", '<input type="password" name="password" autocomplete="new-password">')}
+{field("Confirm Password", '<input type="password" name="confirm_password" autocomplete="new-password">')}
+"""
+        else:
+            form_title = "Change Password"
+            form_inputs = f"""
+{field("Current Password", '<input type="password" name="current_password" autocomplete="current-password">')}
+{field("New Password", '<input type="password" name="new_password" autocomplete="new-password">')}
+"""
+
+        body = f"""
+{alert_html}
+{opts_html}
+<div class="body">
+<strong>{h(form_title)}</strong>
+<form method="post" action="{base}/password">
+<input type="hidden" name="action" value="save_password">
+{form_inputs}
+{save_button()}
+</form>
+</div>
+<div class="body">
+<strong>Session Expiry</strong>
+<form method="post" action="{base}/password">
+<input type="hidden" name="action" value="save_expiry">
+{field("Expiry duration (minutes)", f'<input type="number" name="expiry_minutes" value="{expiry_min}" min="1" max="1440">', "Default 10 min. Session locks after inactivity.")}
+{save_button()}
+</form>
+</div>
+"""
+        if is_set:
+            body += f"""<div style="margin-top:10px;"><a class="btn" href="/lock">Lock MiniOS Now</a></div>"""
+
+        return phone_page("Password", body, nav=[("Apps", "/"), ("Settings", base)], extra_css=SETTINGS_CSS)
+
+    @flask_app.route(base + "/password/reset", methods=["GET", "POST"])
+    def settings_password_reset():
+        auth_cfg = app_settings("auth")
+        pwd_hash = auth_cfg.get("password_hash", "")
+        is_set = bool(pwd_hash)
+        error = ""
+        msg = request.args.get("msg", "")
+
+        if request.method == "POST":
+            confirmation = request.form.get("confirmation", "").strip()
+            if not is_set:
+                error = "No password is currently set."
+            elif confirmation.lower() != "confirm":
+                error = "Please type 'Confirm' to proceed."
+            else:
+                update_app_settings("auth", {"password_hash": ""})
+                session.pop("authenticated", None)
+                session.pop("last_active", None)
+                return redirect(base + "/password?msg=Password+reset+successfully")
+
+        alert_html = ""
+        if error:
+            alert_html = f"<div class='alert alert-error'>{h(error)}</div>"
+        elif msg:
+            alert_html = f"<div class='alert alert-success'>{h(msg)}</div>"
+
+        set_or_change = "Change password" if is_set else "Set password"
+        opts_html = f"""
+<div style="margin:2px 0 10px;">
+<a class="btn" href="{base}/password"><strong>{h(set_or_change)}</strong></a>
+<a class="btn" style="background:#1a3c5a;" href="{base}/password/reset"><strong>Reset password</strong></a>
+</div>
+"""
+        if not is_set:
+            body = f"""
+{alert_html}
+{opts_html}
+<div class="body">
+<span class="small">No password is currently set. Use "Set password" to configure one.</span>
+</div>
+"""
+        else:
+            body = f"""
+{alert_html}
+{opts_html}
+<div class="body">
+<strong>Reset Password</strong>
+<div class="small" style="color:#ffb0b0;margin:6px 0 10px;line-height:1.4;">This will make your MiniOS accessible to everyone. Type Confirm to proceed.</div>
+<form method="post" action="{base}/password/reset">
+{field("Confirmation", '<input type="text" name="confirmation" autocomplete="off" placeholder="Type Confirm">')}
+<input class="btn btn-danger" type="submit" value="Reset Password" style="padding:6px 12px;font-size:13px;cursor:pointer;">
+</form>
+</div>
+"""
+        return phone_page("Reset Password", body, nav=[("Apps", "/"), ("Settings", base), ("Back", f"{base}/password")], extra_css=SETTINGS_CSS)
 
     @flask_app.route(base + "/about")
     def settings_about():
