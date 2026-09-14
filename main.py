@@ -157,6 +157,8 @@ def check_authentication():
         path == "/login"
         or path.startswith("/icons/")
         or path.startswith("/github_res/")
+        or path.startswith("/webhook/")
+        or path.startswith("/media/")
         or path == "/favicon.ico"
     ):
         return None
