@@ -314,7 +314,7 @@ def root():
         {"name": "DuckDuckGo", "label": "DuckDuckGo", "url": "/duckduckgo", "icon": "duckduckgo.png", "disabled": DUCKDUCKGO_IMPORT_ERROR is not None},
         {"name": "Weather", "url": "/weather", "icon": "weather.png", "disabled": WEATHER_IMPORT_ERROR is not None},
         {"name": "Notes", "url": "/notes", "icon": "notes.png", "disabled": NOTES_IMPORT_ERROR is not None},
-        {"name": "AI", "url": "/ai", "icon": "ai.png", "disabled": AI_IMPORT_ERROR is not None},
+        {"name": "MiniAI", "url": "/ai", "icon": "ai.png", "disabled": AI_IMPORT_ERROR is not None},
         {"name": "Finance", "url": "/finance", "icon": "finance.png", "disabled": FINANCE_IMPORT_ERROR is not None},
         {"name": "Boards", "url": "/boards", "icon": "boards.png", "disabled": BOARDS_IMPORT_ERROR is not None},
         {"name": "Gmail", "url": "/mail", "icon": "gmail.png", "disabled": MAIL_IMPORT_ERROR is not None},
